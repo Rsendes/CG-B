@@ -8,7 +8,7 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 /* GLOBAL VARIABLES */
 //////////////////////
 let camera, scene, renderer;
-let cameraFrontal, cameraLateral, cameraTop;
+let cameraFrontal, cameraLateral, cameraTop, cameraBottom;
 let currCamera;
 let cube, wireframe;
 let aspect;
@@ -37,6 +37,7 @@ function createCameras() {
     cameraFrontal = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
     cameraLateral = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
     cameraTop = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
+    cameraBottom = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
     
     // Create perspective camera (original camera)
     camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
@@ -54,11 +55,15 @@ function createCameras() {
 
     cameraTop.position.set(0, 3, 0);
     cameraTop.lookAt(0, 0, 0);
+    
+    cameraBottom.position.set(0, -3, 0);
+    cameraBottom.lookAt(0, 0, 0);
 
     // Add cameras to the scene for reference
     scene.add(cameraFrontal);
     scene.add(cameraLateral);
     scene.add(cameraTop);
+    scene.add(cameraBottom);
     scene.add(camera);
     
     // Set default camera
@@ -77,7 +82,7 @@ function createLights() {
 ////////////////////////
 function createObjects() {
     // Add a cube with different colors for each face
-    const geometry = new THREE.BoxGeometry();
+    const geometry = new THREE.BoxGeometry(3, 1, 1.2);
     
     // Create materials array - one for each face
     const materials = [
@@ -97,6 +102,49 @@ function createObjects() {
     const edgesMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
     wireframe = new THREE.LineSegments(edgesGeometry, edgesMaterial);
     cube.add(wireframe);
+    
+    // Add four wheels (cylinders) to the parallelepiped
+    const wheelGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 32);
+    const wheelMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); // Dark gray
+    
+    // Left side rear wheel
+    const leftFrontWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+    leftFrontWheel.position.set(-1.25, -0.65, 0.5); // Left side, front
+    leftFrontWheel.rotation.y = Math.PI/2; // Rotate to point outward
+    leftFrontWheel.rotation.z = Math.PI/2; // Rotate to point outward
+    scene.add(leftFrontWheel);
+    
+    // Left side rear wheel
+    const leftRearWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+    leftRearWheel.position.set(-1.25, -0.65, -0.5); // Left side, rear
+    leftRearWheel.rotation.z = Math.PI/2; // Rotate to point outward
+    leftRearWheel.rotation.y = Math.PI/2; // Rotate to point outward
+    scene.add(leftRearWheel);
+    
+    // Right side rear wheel
+    const rightFrontWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+    rightFrontWheel.position.set(-0.85, -0.65, -0.5); // Right side, front
+    rightFrontWheel.rotation.z = Math.PI/2; // Rotate to point outward
+    rightFrontWheel.rotation.y = Math.PI/2; // Rotate to point outward65656
+    scene.add(rightFrontWheel);
+    
+    // Right side rear wheel
+    const rightRearWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+    rightRearWheel.position.set(-0.85, -0.65,0.5); // Right side, rear
+    rightRearWheel.rotation.z = Math.PI/2; // Rotate to point outward
+    rightRearWheel.rotation.y = Math.PI/2; // Rotate to point outward
+    scene.add(rightRearWheel);
+
+    // Add trailer hitch - a cylinder in the middle bottom of the trailer
+    const hitchMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 }); // Dark gray
+    const hitchGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.15, 32);
+    const hitch = new THREE.Mesh(hitchGeometry, hitchMaterial);
+    
+    // Position it at the middle bottom of the back side
+    hitch.position.set(1.2, -0.5, 0); // Center, bottom, back
+    hitch.rotation.y = Math.PI/2; // Rotate to be horizontal
+    
+    scene.add(hitch);
 }
 
 //////////////////////
@@ -195,6 +243,12 @@ function onResize() {
         cameraTop.top = height/2;
         cameraTop.bottom = -height/2;
         cameraTop.updateProjectionMatrix();
+        
+        cameraBottom.left = -width/2;
+        cameraBottom.right = width/2;
+        cameraBottom.top = height/2;
+        cameraBottom.bottom = -height/2;
+        cameraBottom.updateProjectionMatrix();
     }
 }
 
@@ -214,6 +268,9 @@ function onKeyDown(e) {
             break;
         case 52: // '4' - Original perspective camera
             currCamera = camera;
+            break;
+        case 53: // '5' - Bottom camera
+            currCamera = cameraBottom;
             break;
     }
 }
