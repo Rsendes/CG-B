@@ -92,6 +92,7 @@ function createLights() {
 /* CREATE OBJECT3D(S) */
 ////////////////////////
 function createObjects() {
+    
     // Criar um grupo para o veículo (cubo + rodas)
     trailer = new THREE.Group();
     
