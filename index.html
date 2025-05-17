@@ -1,72 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <title>Robo</title>
-        <style>
-            body {
-                margin: 0;
-                background-color: black;
-                overflow: hidden;
-                font-family: Arial, sans-serif;
-            }
-            
-            #hud {
-                position: absolute;
-                bottom: 20px;
-                right: 20px;
-                color: white;
-                background-color: rgba(255, 255, 255, 0.5);
-                padding: 10px;
-                border-radius: 5px;
-            }
-            
-            .keys {
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .numbers, .letters {
-                display: flex;
-                gap: 5px;
-            }
-            
-            .key {
-                width: 30px;
-                height: 30px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: #333;
-                border-radius: 5px;
-                cursor: pointer;
-            }
-            
-            .key.active {
-                background-color: #4CAF50;
-            }
-        </style>
-        <script type="importmap">
-            {
-                "imports": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.module.js"
-                }
-            }
-        </script>
-    </head>
-    <body>
-        <script type="module" src="robo.js"></script>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="css/style.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@v0.176.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.176.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="js/main-script.js"></script>
+    <title>Robo</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: black;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
         
-        <div id="hud">
-            <div class="keys">
-                <div class="numbers">
-                    <div class="key" id="key1" title="Frontal Camera">1</div>
-                    <div class="key" id="key2" title="Lateral Camera">2</div>
-                    <div class="key" id="key3" title="Top Camera">3</div>
-                    <div class="key" id="key4" title="Perspective Camera">4</div>
-                </div>
+        #hud {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: white;
+            background-color: rgba(255, 255, 255, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .keys {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .numbers, .letters {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .key {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #333;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .key.active {
+            background-color: #4CAF50;
+        }
+    </style>
+  </head>
+
+  <body>
+    <div id="hud">
+        <div class="keys">
+            <div class="numbers">
+                <div class="key" id="key1" title="Frontal Camera">1</div>
+                <div class="key" id="key2" title="Lateral Camera">2</div>
+                <div class="key" id="key3" title="Top Camera">3</div>
+                <div class="key" id="key4" title="Perspective Camera">4</div>
             </div>
         </div>
-    </body>
+    </div>
+  </body>
 </html>
