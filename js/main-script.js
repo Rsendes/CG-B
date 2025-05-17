@@ -1,206 +1,355 @@
-import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { VRButton } from "three/addons/webxr/VRButton.js";
-import * as Stats from "three/addons/libs/stats.module.js";
-import { GUI } from "three/addons/libs/lil-gui.module.min.js";
+import * as THREE from 'three';
 
-//////////////////////
-/* GLOBAL VARIABLES */
-//////////////////////
-let camera, scene, renderer;
-let cameraFrontal, cameraLateral, cameraTop;
+let scene, renderer;
+let camera, cameraFrontal, cameraLateral, cameraTop;
 let currCamera;
-let cube, wireframe;
-let aspect;
+let isRobotMode = true;
 
-/////////////////////
-/* CREATE SCENE(S) */
-/////////////////////
-function createScene() {
-    // Create a scene
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xcccccc);
-}
+// Robot parts
+let robotGroup, headGroup, torsoGroup, armsGroup, legsGroup;
+let head, eyes, antennas, torso, abdomen, waist;
+let leftArm, rightArm, leftForearm, rightForearm, exhaust1, exhaust2;
+let leftThigh, rightThigh, leftLeg, rightLeg, leftFoot, rightFoot;
+let wheels = [];
 
-//////////////////////
-/* CREATE CAMERA(S) */
-//////////////////////
-function createCameras() {
-    // Calculate aspect ratio
-    aspect = window.innerWidth / window.innerHeight;
-    
-    const size = 2;
-    const width = size * aspect;
-    const height = size;
-    
-    // Create orthographic cameras with proper aspect ratio
-    cameraFrontal = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
-    cameraLateral = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
-    cameraTop = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
-    
-    // Create perspective camera (original camera)
-    camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
-    camera.position.z = 3;
-    camera.position.x = 3;
-    camera.position.y = 3;
-    camera.lookAt(0, 0, 0);
-
-    // Set camera positions and orientations
-    cameraFrontal.position.set(0, 0, 3);
-    cameraFrontal.lookAt(0, 0, 0);
-
-    cameraLateral.position.set(3, 0, 0);
-    cameraLateral.lookAt(0, 0, 0);
-
-    cameraTop.position.set(0, 3, 0);
-    cameraTop.lookAt(0, 0, 0);
-
-    // Add cameras to the scene for reference
-    scene.add(cameraFrontal);
-    scene.add(cameraLateral);
-    scene.add(cameraTop);
-    scene.add(camera);
-    
-    // Set default camera
-    currCamera = cameraFrontal;
-}
-
-/////////////////////
-/* CREATE LIGHT(S) */
-/////////////////////
-function createLights() {
-    // No lights in the original code since we're using MeshBasicMaterial
-}
-
-////////////////////////
-/* CREATE OBJECT3D(S) */
-////////////////////////
-function createObjects() {
-    // Add a cube with different colors for each face
-    const geometry = new THREE.BoxGeometry();
-    
-    // Create materials array - one for each face
-    const materials = [
-        new THREE.MeshBasicMaterial({ color: 0xff0000 }), // Right face (positive X)
-        new THREE.MeshBasicMaterial({ color: 0x00ff00 }), // Left face (negative X)
-        new THREE.MeshBasicMaterial({ color: 0x0000ff }), // Top face (positive Y)
-        new THREE.MeshBasicMaterial({ color: 0xffff00 }), // Bottom face (negative Y)
-        new THREE.MeshBasicMaterial({ color: 0xff00ff }), // Front face (positive Z)
-        new THREE.MeshBasicMaterial({ color: 0x00ffff })  // Back face (negative Z)
-    ];
-    
-    cube = new THREE.Mesh(geometry, materials);
-    scene.add(cube);
-
-    // Add wireframe to highlight edges and corners
-    const edgesGeometry = new THREE.EdgesGeometry(geometry);
-    const edgesMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
-    wireframe = new THREE.LineSegments(edgesGeometry, edgesMaterial);
-    cube.add(wireframe);
-}
-
-//////////////////////
-/* CHECK COLLISIONS */
-//////////////////////
-function checkCollisions() {}
-
-///////////////////////
-/* HANDLE COLLISIONS */
-///////////////////////
-function handleCollisions() {}
-
-////////////
-/* UPDATE */
-////////////
-function update() {}
-
-/////////////
-/* DISPLAY */
-/////////////
-function render() {
-    // Render with the current camera
-    renderer.render(scene, currCamera);
-}
-
-////////////////////////////////
-/* INITIALIZE ANIMATION CYCLE */
-////////////////////////////////
 function init() {
     // Create scene
-    createScene();
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x222222);
     
     // Create cameras
     createCameras();
     
-    // Create objects
-    createObjects();
-
-    // Create a renderer
-    renderer = new THREE.WebGLRenderer();
+    // Create renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-
+    
+    // Create robot
+    createRobot();
+    
+    // Set default camera
+    currCamera = camera;
+    
     // Add event listeners
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", onResize);
+    
+    // Start animation loop
+    animate();
 }
 
-/////////////////////
-/* ANIMATION CYCLE */
-/////////////////////
-function animate() {
-    requestAnimationFrame(animate);
+function createCameras() {
+    const aspect = window.innerWidth / window.innerHeight;
     
-    // Update scene
-    update();
+    // Perspective camera
+    camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
+    camera.position.set(0, 5, 15);
+    camera.lookAt(0, 0, 0);
     
-    // Render scene
-    render();
+    // Orthographic cameras
+    const size = 10;
+    const width = size * aspect;
+    const height = size;
+    
+    cameraFrontal = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 100);
+    cameraFrontal.position.set(0, 0, 15);
+    cameraFrontal.lookAt(0, 0, 0);
+    
+    cameraLateral = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 100);
+    cameraLateral.position.set(15, 0, 0);
+    cameraLateral.lookAt(0, 0, 0);
+    
+    cameraTop = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 100);
+    cameraTop.position.set(0, 15, 0);
+    cameraTop.lookAt(0, 0, 0);
 }
 
-////////////////////////////
-/* RESIZE WINDOW CALLBACK */
-////////////////////////////
-function onResize() {
-    // Update aspect ratio
-    aspect = window.innerWidth / window.innerHeight;
+function createRobot() {
+    // Create main group
+    robotGroup = new THREE.Group();
+    scene.add(robotGroup);
     
-    // Update renderer size
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    // Create materials with different colors
+    const headMaterial = new THREE.MeshBasicMaterial({ color: 0x3366CC });
+    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+    const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0x2244AA });
+    const limbMaterial = new THREE.MeshBasicMaterial({ color: 0x1133AA });
+    const wheelMaterial = new THREE.MeshBasicMaterial({ color: 0x222222 });
+    const detailMaterial = new THREE.MeshBasicMaterial({ color: 0xDDDDDD });
     
-    if (window.innerHeight > 0 && window.innerWidth > 0) {
-        // Update perspective camera
-        camera.aspect = aspect;
-        camera.updateProjectionMatrix();
+    // Head Group
+    headGroup = new THREE.Group();
+    headGroup.position.y = 6;
+    
+    // Head (cube)
+    head = new THREE.Mesh(
+        new THREE.BoxGeometry(2, 1.5, 1.5),
+        headMaterial
+    );
+    headGroup.add(head);
+    
+    // Eyes (small cubes)
+    const leftEye = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3, 0.3, 0.1),
+        eyeMaterial
+    );
+    leftEye.position.set(-0.5, 0.2, 0.8);
+    headGroup.add(leftEye);
+    
+    const rightEye = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3, 0.3, 0.1),
+        eyeMaterial
+    );
+    rightEye.position.set(0.5, 0.2, 0.8);
+    headGroup.add(rightEye);
+    
+    // Antennas (cones)
+    const leftAntenna = new THREE.Mesh(
+        new THREE.ConeGeometry(0.2, 0.8, 8),
+        detailMaterial
+    );
+    leftAntenna.position.set(-0.7, 0.8, 0);
+    headGroup.add(leftAntenna);
+    
+    const rightAntenna = new THREE.Mesh(
+        new THREE.ConeGeometry(0.2, 0.8, 8),
+        detailMaterial
+    );
+    rightAntenna.position.set(0.7, 0.8, 0);
+    headGroup.add(rightAntenna);
+    
+    // Torso Group
+    torsoGroup = new THREE.Group();
+    torsoGroup.position.y = 3.5;
+    
+    // Torso (cube)
+    torso = new THREE.Mesh(
+        new THREE.BoxGeometry(3, 2, 1.5),
+        bodyMaterial
+    );
+    torsoGroup.add(torso);
+    
+    // Abdomen (cube)
+    abdomen = new THREE.Mesh(
+        new THREE.BoxGeometry(2.5, 1, 1.3),
+        bodyMaterial
+    );
+    abdomen.position.y = -1.5;
+    torsoGroup.add(abdomen);
+    
+    // Waist (cube)
+    waist = new THREE.Mesh(
+        new THREE.BoxGeometry(2, 0.5, 1),
+        bodyMaterial
+    );
+    waist.position.y = -2.25;
+    torsoGroup.add(waist);
+    
+    // Arms Group
+    armsGroup = new THREE.Group();
+    armsGroup.position.y = 4.5;
+    
+    // Left Arm (cylinder)
+    leftArm = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.4, 0.4, 1.5, 8),
+        limbMaterial
+    );
+    leftArm.position.set(-2, 0, 0);
+    leftArm.rotation.z = Math.PI / 2;
+    armsGroup.add(leftArm);
+    
+    // Left Forearm (cylinder)
+    leftForearm = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.35, 1.8, 8),
+        limbMaterial
+    );
+    leftForearm.position.set(-3.15, 0, 0);
+    leftForearm.rotation.z = Math.PI / 2;
+    armsGroup.add(leftForearm);
+    
+    // Right Arm (cylinder)
+    rightArm = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.4, 0.4, 1.5, 8),
+        limbMaterial
+    );
+    rightArm.position.set(2, 0, 0);
+    rightArm.rotation.z = Math.PI / 2;
+    armsGroup.add(rightArm);
+    
+    // Right Forearm (cylinder)
+    rightForearm = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.35, 1.8, 8),
+        limbMaterial
+    );
+    rightForearm.position.set(3.15, 0, 0);
+    rightForearm.rotation.z = Math.PI / 2;
+    armsGroup.add(rightForearm);
+    
+    // Exhaust pipes (small cylinders)
+    exhaust1 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.15, 0.5, 8),
+        detailMaterial
+    );
+    exhaust1.position.set(-3.15, 0, 0.4);
+    armsGroup.add(exhaust1);
+    
+    exhaust2 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.15, 0.5, 8),
+        detailMaterial
+    );
+    exhaust2.position.set(3.15, 0, 0.4);
+    armsGroup.add(exhaust2);
+    
+    // Legs Group
+    legsGroup = new THREE.Group();
+    legsGroup.position.y = 0.7;
+    
+    // Left Thigh (cylinder)
+    leftThigh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5, 0.5, 1.5, 8),
+        limbMaterial
+    );
+    leftThigh.position.set(-1, 0, 0);
+    legsGroup.add(leftThigh);
+    
+    // Left Leg (cylinder)
+    leftLeg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.45, 0.45, 1.5, 8),
+        limbMaterial
+    );
+    leftLeg.position.set(-1, -1.5, 0);
+    legsGroup.add(leftLeg);
+    
+    // Left Foot (box)
+    leftFoot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.4, 1.3),
+        limbMaterial
+    );
+    leftFoot.position.set(-1, -2.5, 0.2);
+    legsGroup.add(leftFoot);
+    
+    // Right Thigh (cylinder)
+    rightThigh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5, 0.5, 1.5, 8),
+        limbMaterial
+    );
+    rightThigh.position.set(1, 0, 0);
+    legsGroup.add(rightThigh);
+    
+    // Right Leg (cylinder)
+    rightLeg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.45, 0.45, 1.5, 8),
+        limbMaterial
+    );
+    rightLeg.position.set(1, -1.5, 0);
+    legsGroup.add(rightLeg);
+    
+    // Right Foot (box)
+    rightFoot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.4, 1.3),
+        limbMaterial
+    );
+    rightFoot.position.set(1, -2.5, 0.2);
+    legsGroup.add(rightFoot);
+    
+    // Wheels (6 cylinders)
+    for (let i = 0; i < 6; i++) {
+        const wheel = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.6, 0.6, 0.3, 16),
+            wheelMaterial
+        );
         
-        // Update orthographic cameras to maintain aspect ratio
-        const size = 2;
-        const width = size * aspect;
-        const height = size;
+        // Position wheels in a truck configuration (hidden in robot mode)
+        if (i < 3) { // Left side
+            wheel.position.set(-1.5, -3, -1 + i);
+        } else { // Right side
+            wheel.position.set(1.5, -3, -4 + i);
+        }
         
-        cameraFrontal.left = -width/2;
-        cameraFrontal.right = width/2;
-        cameraFrontal.top = height/2;
-        cameraFrontal.bottom = -height/2;
-        cameraFrontal.updateProjectionMatrix();
-        
-        cameraLateral.left = -width/2;
-        cameraLateral.right = width/2;
-        cameraLateral.top = height/2;
-        cameraLateral.bottom = -height/2;
-        cameraLateral.updateProjectionMatrix();
-        
-        cameraTop.left = -width/2;
-        cameraTop.right = width/2;
-        cameraTop.top = height/2;
-        cameraTop.bottom = -height/2;
-        cameraTop.updateProjectionMatrix();
+        wheel.rotation.z = Math.PI / 2;
+        wheels.push(wheel);
+        robotGroup.add(wheel);
     }
+    
+    // Add all groups to robot
+    robotGroup.add(headGroup);
+    robotGroup.add(torsoGroup);
+    robotGroup.add(armsGroup);
+    robotGroup.add(legsGroup);
+    
+    // Initially hide wheels in robot mode
+    wheels.forEach(wheel => {
+        wheel.visible = false;
+    });
 }
 
-///////////////////////
-/* KEY DOWN CALLBACK */
-///////////////////////
+// Transform between robot and truck
+function transformRobot() {
+    if (isRobotMode) {
+        // Transform to truck mode
+        
+        // Lower the robot
+        robotGroup.position.y = -1;
+        
+        // Rotate head to become truck cab
+        headGroup.rotation.x = Math.PI / 2;
+        headGroup.position.set(0, 2, 3);
+        
+        // Flatten torso and position for truck body
+        torsoGroup.rotation.x = Math.PI / 2;
+        torsoGroup.position.set(0, 2, 0);
+        
+        // Position arms along sides
+        armsGroup.position.set(0, 2, 0);
+        leftArm.rotation.x = Math.PI / 2;
+        rightArm.rotation.x = Math.PI / 2;
+        leftForearm.rotation.x = Math.PI / 2;
+        rightForearm.rotation.x = Math.PI / 2;
+        
+        // Position legs to back of truck
+        legsGroup.rotation.x = Math.PI / 2;
+        legsGroup.position.set(0, 2, -3);
+        
+        // Show wheels
+        wheels.forEach(wheel => {
+            wheel.visible = true;
+        });
+        
+    } else {
+        // Transform to robot mode
+        
+        // Raise the robot
+        robotGroup.position.y = 0;
+        
+        // Reset head position
+        headGroup.rotation.x = 0;
+        headGroup.position.set(0, 6, 0);
+        
+        // Reset torso position
+        torsoGroup.rotation.x = 0;
+        torsoGroup.position.set(0, 3.5, 0);
+        
+        // Reset arms position
+        armsGroup.position.set(0, 4.5, 0);
+        leftArm.rotation.x = 0;
+        rightArm.rotation.x = 0;
+        leftForearm.rotation.x = 0;
+        rightForearm.rotation.x = 0;
+        
+        // Reset legs position
+        legsGroup.rotation.x = 0;
+        legsGroup.position.set(0, 0.7, 0);
+        
+        // Hide wheels
+        wheels.forEach(wheel => {
+            wheel.visible = false;
+        });
+    }
+    
+    isRobotMode = !isRobotMode;
+}
+
 function onKeyDown(e) {
     switch (e.keyCode) {
         case 49: // '1' - Frontal camera
@@ -212,16 +361,59 @@ function onKeyDown(e) {
         case 51: // '3' - Top camera
             currCamera = cameraTop;
             break;
-        case 52: // '4' - Original perspective camera
+        case 52: // '4' - Perspective camera
             currCamera = camera;
             break;
+        case 84: // 'T' - Transform
+            transformRobot();
+            break;
+    }
+    
+    // Update the active class for the keys in the HUD
+    document.querySelectorAll('.key').forEach(key => key.classList.remove('active'));
+    
+    if (e.keyCode >= 49 && e.keyCode <= 52) {
+        document.getElementById(`key${e.keyCode - 48}`).classList.add('active');
     }
 }
 
-///////////////////////
-/* KEY UP CALLBACK */
-///////////////////////
-function onKeyUp(e) {}
+function onResize() {
+    const aspect = window.innerWidth / window.innerHeight;
+    
+    // Update renderer
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    
+    // Update perspective camera
+    camera.aspect = aspect;
+    camera.updateProjectionMatrix();
+    
+    // Update orthographic cameras
+    const size = 10;
+    const width = size * aspect;
+    const height = size;
+    
+    cameraFrontal.left = -width/2;
+    cameraFrontal.right = width/2;
+    cameraFrontal.top = height/2;
+    cameraFrontal.bottom = -height/2;
+    cameraFrontal.updateProjectionMatrix();
+    
+    cameraLateral.left = -width/2;
+    cameraLateral.right = width/2;
+    cameraLateral.top = height/2;
+    cameraLateral.bottom = -height/2;
+    cameraLateral.updateProjectionMatrix();
+    
+    cameraTop.left = -width/2;
+    cameraTop.right = width/2;
+    cameraTop.top = height/2;
+    cameraTop.bottom = -height/2;
+    cameraTop.updateProjectionMatrix();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, currCamera);
+}
 
 init();
-animate();
