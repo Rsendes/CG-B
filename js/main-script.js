@@ -10,8 +10,19 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 let camera, scene, renderer;
 let cameraFrontal, cameraLateral, cameraTop, cameraBottom;
 let currCamera;
-let cube, wireframe;
+let trailer, hitch;
 let aspect;
+
+// Track keys being pressed
+const keyState = {
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false
+};
+// Movement speed
+const MOVEMENT_SPEED = 0.05;
+
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -81,7 +92,10 @@ function createLights() {
 /* CREATE OBJECT3D(S) */
 ////////////////////////
 function createObjects() {
-    // Add a cube with different colors for each face
+    // Criar um grupo para o veículo (cubo + rodas)
+    trailer = new THREE.Group();
+    
+    // Add a trailer with different colors for each face
     const geometry = new THREE.BoxGeometry(3, 1, 1.2);
     
     // Create materials array - one for each face
@@ -94,57 +108,57 @@ function createObjects() {
         new THREE.MeshBasicMaterial({ color: 0x00ffff })  // Back face (negative Z)
     ];
     
-    cube = new THREE.Mesh(geometry, materials);
-    scene.add(cube);
+    const trailerBody = new THREE.Mesh(geometry, materials);
+    trailer.add(trailerBody); // Adicionar o corpo ao grupo em vez da cena
 
-    // Add wireframe to highlight edges and corners
-    const edgesGeometry = new THREE.EdgesGeometry(geometry);
-    const edgesMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
-    wireframe = new THREE.LineSegments(edgesGeometry, edgesMaterial);
-    cube.add(wireframe);
-    
     // Add four wheels (cylinders) to the parallelepiped
     const wheelGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 32);
     const wheelMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); // Dark gray
     
-    // Left side rear wheel
+    // Left side front wheel
     const leftFrontWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
     leftFrontWheel.position.set(-1.25, -0.65, 0.5); // Left side, front
     leftFrontWheel.rotation.y = Math.PI/2; // Rotate to point outward
     leftFrontWheel.rotation.z = Math.PI/2; // Rotate to point outward
-    scene.add(leftFrontWheel);
+    trailer.add(leftFrontWheel); // Adicionar ao grupo em vez da cena
     
     // Left side rear wheel
     const leftRearWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
     leftRearWheel.position.set(-1.25, -0.65, -0.5); // Left side, rear
     leftRearWheel.rotation.z = Math.PI/2; // Rotate to point outward
     leftRearWheel.rotation.y = Math.PI/2; // Rotate to point outward
-    scene.add(leftRearWheel);
+    trailer.add(leftRearWheel); // Adicionar ao grupo em vez da cena
     
-    // Right side rear wheel
+    // Right side front wheel
     const rightFrontWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
     rightFrontWheel.position.set(-0.85, -0.65, -0.5); // Right side, front
     rightFrontWheel.rotation.z = Math.PI/2; // Rotate to point outward
-    rightFrontWheel.rotation.y = Math.PI/2; // Rotate to point outward65656
-    scene.add(rightFrontWheel);
+    rightFrontWheel.rotation.y = Math.PI/2; // Rotate to point outward
+    trailer.add(rightFrontWheel); // Adicionar ao grupo em vez da cena
     
     // Right side rear wheel
     const rightRearWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-    rightRearWheel.position.set(-0.85, -0.65,0.5); // Right side, rear
+    rightRearWheel.position.set(-0.85, -0.65, 0.5); // Right side, rear
     rightRearWheel.rotation.z = Math.PI/2; // Rotate to point outward
     rightRearWheel.rotation.y = Math.PI/2; // Rotate to point outward
-    scene.add(rightRearWheel);
+    trailer.add(rightRearWheel); // Adicionar ao grupo em vez da cena
 
     // Add trailer hitch - a cylinder in the middle bottom of the trailer
     const hitchMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 }); // Dark gray
     const hitchGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.15, 32);
-    const hitch = new THREE.Mesh(hitchGeometry, hitchMaterial);
+    
+    // Usar trailer em vez de hitch
+    hitch = new THREE.Mesh(hitchGeometry, hitchMaterial);
     
     // Position it at the middle bottom of the back side
     hitch.position.set(1.2, -0.5, 0); // Center, bottom, back
     hitch.rotation.y = Math.PI/2; // Rotate to be horizontal
-    
-    scene.add(hitch);
+
+
+    // Adicionar o grupo à cena
+    trailer.add(hitch); // Adicionar o trailer ao grupo
+    scene.add(trailer);
+
 }
 
 //////////////////////
@@ -160,7 +174,21 @@ function handleCollisions() {}
 ////////////
 /* UPDATE */
 ////////////
-function update() {}
+function update() {
+    // Move trailer based on which arrow keys are pressed
+    if (keyState.ArrowUp) {
+        trailer.position.z -= MOVEMENT_SPEED;
+    }
+    if (keyState.ArrowDown) {
+        trailer.position.z += MOVEMENT_SPEED;
+    }
+    if (keyState.ArrowLeft) {
+        trailer.position.x -= MOVEMENT_SPEED;
+    }
+    if (keyState.ArrowRight) {
+        trailer.position.x += MOVEMENT_SPEED;
+    }
+}
 
 /////////////
 /* DISPLAY */
@@ -190,6 +218,7 @@ function init() {
 
     // Add event listeners
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
     window.addEventListener("resize", onResize);
 }
 
@@ -256,21 +285,29 @@ function onResize() {
 /* KEY DOWN CALLBACK */
 ///////////////////////
 function onKeyDown(e) {
-    switch (e.keyCode) {
-        case 49: // '1' - Frontal camera
+    // Camera selection with number keys
+    switch (e.code) {
+        case "Digit1": // '1' - Frontal camera
             currCamera = cameraFrontal;
             break;
-        case 50: // '2' - Lateral camera
+        case "Digit2": // '2' - Lateral camera
             currCamera = cameraLateral;
             break;
-        case 51: // '3' - Top camera
+        case "Digit3": // '3' - Top camera
             currCamera = cameraTop;
             break;
-        case 52: // '4' - Original perspective camera
+        case "Digit4": // '4' - Original perspective camera
             currCamera = camera;
             break;
-        case 53: // '5' - Bottom camera
+        case "Digit5": // '5' - Bottom camera
             currCamera = cameraBottom;
+            break;
+        // Track arrow keys for trailer movement
+        case "ArrowUp":
+        case "ArrowDown":
+        case "ArrowLeft":
+        case "ArrowRight":
+            keyState[e.code] = true;
             break;
     }
 }
@@ -278,7 +315,12 @@ function onKeyDown(e) {
 ///////////////////////
 /* KEY UP CALLBACK */
 ///////////////////////
-function onKeyUp(e) {}
+function onKeyUp(e) {
+    // Reset key state when key is released
+    if (keyState.hasOwnProperty(e.code)) {
+        keyState[e.code] = false;
+    }
+}
 
 init();
 animate();
