@@ -10,7 +10,7 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 let camera, scene, renderer;
 let cameraFrontal, cameraLateral, cameraTop, cameraBottom;
 let currCamera;
-let trailer, hitch;
+let trailer, hitch, robot;
 let aspect;
 
 // Track keys being pressed
@@ -22,8 +22,7 @@ const keyState = {
 };
 // Movement speed
 const MOVEMENT_SPEED = 0.05;
-const TRAILER_TRAVEL = 0; // Constant travel distance for the trailer
-
+const TRAILER_TRAVEL = 3; // Constant travel distance for the trailer
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -81,6 +80,21 @@ function createLights() {
 /* CREATE OBJECT3D(S) */
 ////////////////////////
 function createObjects() {
+
+    createTrailer(); // Create the trailer first
+
+    createRobot(); // Create the robot
+    
+    // Add a grid helper to the scene
+    const gridHelper = new THREE.GridHelper(10, 10);
+    scene.add(gridHelper);
+
+    // Add axes helper to the scene
+    const axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper);
+}
+
+function createTrailer() {
     // Create a trailer group object
     trailer = new THREE.Group();
     
@@ -102,20 +116,12 @@ function createObjects() {
     trailer.add(trailerBody); // Adicionar o corpo ao grupo em vez da cena
 
     // Helper function to create and position wheels
-    function addWheel(x, y, z) {
-        const wheelGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 32);
-        const wheelMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); // Dark gray
-        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-        wheel.position.set(x, y, z + TRAILER_TRAVEL); // Position the wheel
-        wheel.rotation.z = Math.PI / 2; // Rotate to point outward
-        trailer.add(wheel);
-    }
 
     // Add four wheels using the helper function
-    addWheel(0.5, -0.75, 1.252); // Left side rear wheel
-    addWheel(0.5, -0.75, 0.90); // Left side front wheel
-    addWheel(-0.5, -0.75, 1.25); // Right side rear wheel
-    addWheel(-0.5, -0.75, 0.90); // Right side front wheel
+    addWheel(0.5, -0.75, 1.25+TRAILER_TRAVEL, trailer); // Left side rear wheel
+    addWheel(0.5, -0.75, 0.90+TRAILER_TRAVEL, trailer); // Left side front wheel
+    addWheel(-0.5, -0.75, 1.25+TRAILER_TRAVEL, trailer); // Right side rear wheel
+    addWheel(-0.5, -0.75, 0.90+TRAILER_TRAVEL, trailer); // Right side front wheel
 
     // Add trailer hitch - a cylinder in the middle bottom of the trailer
     const hitchMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 }); // Dark gray
@@ -128,29 +134,113 @@ function createObjects() {
     // Add the trailer to the scene
     scene.add(trailer);
 
-    // Add a grid helper to the scene
-    const gridHelper = new THREE.GridHelper(10, 10);
-    scene.add(gridHelper);
-
-    // Add axes helper to the scene
-    const axesHelper = new THREE.AxesHelper(5);
-    scene.add(axesHelper);
 }
+
+function addWheel(x, y, z, group) {
+    const wheelGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 32);
+    const wheelMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); // Dark gray
+    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+    wheel.position.set(x, y, z); // Position the wheel
+    wheel.rotation.z = Math.PI / 2; // Rotate to point outward
+    group.add(wheel);
+}
+
+function createRobot() {
+    robot = new THREE.Group();
+
+    var current_height = 0;
+
+    // Create Waist
+    const waistGeometry = new THREE.BoxGeometry(0.4, 0.2, 0.3);
+    const waistMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const waist = new THREE.Mesh(waistGeometry, waistMaterial);
+    robot.add(waist);
+
+    // Create Upper Wheels
+    addWheel(0.25, 0, 0, robot);
+    addWheel(-0.25, 0, 0, robot);
+
+    // Create Abdomen
+    const abdomenGeometry = new THREE.BoxGeometry(0.3, 0.15, 0.3);
+    const abdomenMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    const abdomen = new THREE.Mesh(abdomenGeometry, abdomenMaterial);
+    current_height += 0.175;
+    abdomen.position.set(0, current_height, 0);
+    robot.add(abdomen);
+
+    // Create Torso
+    const torsoGeometry = new THREE.BoxGeometry(0.6, 0.35, 0.45);
+    const torsoMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const torso = new THREE.Mesh(torsoGeometry, torsoMaterial);
+    current_height += 0.25;
+    torso.position.set(0, current_height, 0);
+    robot.add(torso);
+
+    // Create Head Group
+    const headGroup = new THREE.Group();
+    //var rotation_centre = current_height + 0.0875;
+    
+
+    // Create Head Sphere
+    const headGeometry = new THREE.SphereGeometry(0.1, 32, 32);
+    const headMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const head = new THREE.Mesh(headGeometry, headMaterial);
+    current_height += 0.28;
+    head.position.set(0, current_height, 0);
+    headGroup.add(head);
+
+    // Create Eyes
+    const eyeGeometry = new THREE.SphereGeometry(0.015, 32, 32);
+    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    leftEye.position.set(-0.05, current_height, 0.1);
+    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    rightEye.position.set(0.05, current_height, 0.1);
+    headGroup.add(leftEye);
+    headGroup.add(rightEye);
+
+    // Create Antennas
+    const antennaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.1, 32);
+    const antennaMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const leftAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+    current_height += 0.1;
+    leftAntenna.position.set(-0.05, current_height, 0);
+    const rightAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+    rightAntenna.position.set(0.05, current_height, 0);
+    headGroup.add(leftAntenna);
+    headGroup.add(rightAntenna);
+
+    robot.add(headGroup);
+
+    scene.add(robot);
+}
+
 
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
-function checkCollisions() {}
+function checkCollisions() {
+    const trailerBoundingBox = new THREE.Box3().setFromObject(trailer);
+    const robotBoundingBox = new THREE.Box3().setFromObject(robot);
+    return trailerBoundingBox.intersectsBox(robotBoundingBox);
+}
 
 ///////////////////////
 /* HANDLE COLLISIONS */
 ///////////////////////
-function handleCollisions() {}
+function handleCollisions(prevPosition) {
+    // If there's a collision, revert to previous position
+    if (checkCollisions()) {
+        trailer.position.copy(prevPosition);
+    }
+}
 
 ////////////
 /* UPDATE */
 ////////////
 function update() {
+    const prevPosition = trailer.position.clone();
+
     // Move trailer based on which arrow keys are pressed
     if (keyState.ArrowUp) {
         trailer.position.z -= MOVEMENT_SPEED;
@@ -164,6 +254,7 @@ function update() {
     if (keyState.ArrowRight) {
         trailer.position.x += MOVEMENT_SPEED;
     }
+    handleCollisions(prevPosition);
 }
 
 /////////////
