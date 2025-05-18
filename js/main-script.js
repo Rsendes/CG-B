@@ -22,6 +22,7 @@ const keyState = {
 };
 // Movement speed
 const MOVEMENT_SPEED = 0.05;
+const TRAILER_TRAVEL = 0; // Constant travel distance for the trailer
 
 
 /////////////////////
@@ -40,43 +41,31 @@ function createCameras() {
     // Calculate aspect ratio
     aspect = window.innerWidth / window.innerHeight;
     
-    const size = 2;
+    const size = 3;
     const width = size * aspect;
     const height = size;
-    
-    // Create orthographic cameras with proper aspect ratio
-    cameraFrontal = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
-    cameraLateral = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
-    cameraTop = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
-    cameraBottom = new THREE.OrthographicCamera(-width/2, width/2, height/2, -height/2, 0.1, 10);
-    
+
+    // Helper function to create and configure an orthographic camera
+    function createOrthographicCamera(x, y, z) {
+        const camera = new THREE.OrthographicCamera(-width / 2, width / 2, height / 2, -height / 2, 0.1, 10);
+        camera.position.set(x, y, z);
+        camera.lookAt(0, 0, 0);
+        scene.add(camera);
+        return camera;
+    }
+
+    // Create orthographic cameras
+    cameraFrontal = createOrthographicCamera(0, 0, 3);
+    cameraLateral = createOrthographicCamera(3, 0, 0);
+    cameraTop = createOrthographicCamera(0, 3, 0);
+    cameraBottom = createOrthographicCamera(0, -3, 0);
+
     // Create perspective camera (original camera)
     camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
-    camera.position.z = 3;
-    camera.position.x = 3;
-    camera.position.y = 3;
+    camera.position.set(3, 3, -3);
     camera.lookAt(0, 0, 0);
-
-    // Set camera positions and orientations
-    cameraFrontal.position.set(0, 0, 3);
-    cameraFrontal.lookAt(0, 0, 0);
-
-    cameraLateral.position.set(3, 0, 0);
-    cameraLateral.lookAt(0, 0, 0);
-
-    cameraTop.position.set(0, 3, 0);
-    cameraTop.lookAt(0, 0, 0);
-    
-    cameraBottom.position.set(0, -3, 0);
-    cameraBottom.lookAt(0, 0, 0);
-
-    // Add cameras to the scene for reference
-    scene.add(cameraFrontal);
-    scene.add(cameraLateral);
-    scene.add(cameraTop);
-    scene.add(cameraBottom);
     scene.add(camera);
-    
+
     // Set default camera
     currCamera = cameraFrontal;
 }
@@ -92,12 +81,11 @@ function createLights() {
 /* CREATE OBJECT3D(S) */
 ////////////////////////
 function createObjects() {
-    
-    // Criar um grupo para o veículo (cubo + rodas)
+    // Create a trailer group object
     trailer = new THREE.Group();
     
     // Add a trailer with different colors for each face
-    const geometry = new THREE.BoxGeometry(3, 1, 1.2);
+    const geometry = new THREE.BoxGeometry(1, 1.2, 3);
     
     // Create materials array - one for each face
     const materials = [
@@ -110,56 +98,43 @@ function createObjects() {
     ];
     
     const trailerBody = new THREE.Mesh(geometry, materials);
+    trailerBody.position.set(0, 0, TRAILER_TRAVEL); // Position the trailer
     trailer.add(trailerBody); // Adicionar o corpo ao grupo em vez da cena
 
-    // Add four wheels (cylinders) to the parallelepiped
-    const wheelGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 32);
-    const wheelMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); // Dark gray
-    
-    // Left side front wheel
-    const leftFrontWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-    leftFrontWheel.position.set(-1.25, -0.65, 0.5); // Left side, front
-    leftFrontWheel.rotation.y = Math.PI/2; // Rotate to point outward
-    leftFrontWheel.rotation.z = Math.PI/2; // Rotate to point outward
-    trailer.add(leftFrontWheel); // Adicionar ao grupo em vez da cena
-    
-    // Left side rear wheel
-    const leftRearWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-    leftRearWheel.position.set(-1.25, -0.65, -0.5); // Left side, rear
-    leftRearWheel.rotation.z = Math.PI/2; // Rotate to point outward
-    leftRearWheel.rotation.y = Math.PI/2; // Rotate to point outward
-    trailer.add(leftRearWheel); // Adicionar ao grupo em vez da cena
-    
-    // Right side front wheel
-    const rightFrontWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-    rightFrontWheel.position.set(-0.85, -0.65, -0.5); // Right side, front
-    rightFrontWheel.rotation.z = Math.PI/2; // Rotate to point outward
-    rightFrontWheel.rotation.y = Math.PI/2; // Rotate to point outward
-    trailer.add(rightFrontWheel); // Adicionar ao grupo em vez da cena
-    
-    // Right side rear wheel
-    const rightRearWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-    rightRearWheel.position.set(-0.85, -0.65, 0.5); // Right side, rear
-    rightRearWheel.rotation.z = Math.PI/2; // Rotate to point outward
-    rightRearWheel.rotation.y = Math.PI/2; // Rotate to point outward
-    trailer.add(rightRearWheel); // Adicionar ao grupo em vez da cena
+    // Helper function to create and position wheels
+    function addWheel(x, y, z) {
+        const wheelGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 32);
+        const wheelMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); // Dark gray
+        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+        wheel.position.set(x, y, z + TRAILER_TRAVEL); // Position the wheel
+        wheel.rotation.z = Math.PI / 2; // Rotate to point outward
+        trailer.add(wheel);
+    }
+
+    // Add four wheels using the helper function
+    addWheel(0.5, -0.75, 1.252); // Left side rear wheel
+    addWheel(0.5, -0.75, 0.90); // Left side front wheel
+    addWheel(-0.5, -0.75, 1.25); // Right side rear wheel
+    addWheel(-0.5, -0.75, 0.90); // Right side front wheel
 
     // Add trailer hitch - a cylinder in the middle bottom of the trailer
     const hitchMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 }); // Dark gray
-    const hitchGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.15, 32);
-    
-    // Usar trailer em vez de hitch
+    const hitchGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.1, 32);
     hitch = new THREE.Mesh(hitchGeometry, hitchMaterial);
-    
-    // Position it at the middle bottom of the back side
-    hitch.position.set(1.2, -0.5, 0); // Center, bottom, back
-    hitch.rotation.y = Math.PI/2; // Rotate to be horizontal
-
-
-    // Adicionar o grupo à cena
+    hitch.position.set(0, -0.65, -1 + TRAILER_TRAVEL); // Center, bottom, back
+    hitch.rotation.y = Math.PI / 2; // Rotate to be horizontal
     trailer.add(hitch); // Adicionar o trailer ao grupo
+
+    // Add the trailer to the scene
     scene.add(trailer);
 
+    // Add a grid helper to the scene
+    const gridHelper = new THREE.GridHelper(10, 10);
+    scene.add(gridHelper);
+
+    // Add axes helper to the scene
+    const axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper);
 }
 
 //////////////////////
@@ -255,30 +230,19 @@ function onResize() {
         const size = 2;
         const width = size * aspect;
         const height = size;
-        
-        cameraFrontal.left = -width/2;
-        cameraFrontal.right = width/2;
-        cameraFrontal.top = height/2;
-        cameraFrontal.bottom = -height/2;
-        cameraFrontal.updateProjectionMatrix();
-        
-        cameraLateral.left = -width/2;
-        cameraLateral.right = width/2;
-        cameraLateral.top = height/2;
-        cameraLateral.bottom = -height/2;
-        cameraLateral.updateProjectionMatrix();
-        
-        cameraTop.left = -width/2;
-        cameraTop.right = width/2;
-        cameraTop.top = height/2;
-        cameraTop.bottom = -height/2;
-        cameraTop.updateProjectionMatrix();
-        
-        cameraBottom.left = -width/2;
-        cameraBottom.right = width/2;
-        cameraBottom.top = height/2;
-        cameraBottom.bottom = -height/2;
-        cameraBottom.updateProjectionMatrix();
+
+        function updateOrthographicCamera(camera) {
+            camera.left = -width / 2;
+            camera.right = width / 2;
+            camera.top = height / 2;
+            camera.bottom = -height / 2;
+            camera.updateProjectionMatrix();
+        }
+
+        updateOrthographicCamera(cameraFrontal);
+        updateOrthographicCamera(cameraLateral);
+        updateOrthographicCamera(cameraTop);
+        updateOrthographicCamera(cameraBottom);
     }
 }
 
