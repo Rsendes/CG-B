@@ -10,7 +10,7 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 let camera, scene, renderer;
 let cameraFrontal, cameraLateral, cameraTop, cameraBottom;
 let currCamera;
-let trailer, hitch, robot;
+let trailer, hitch, robot, headGroup;
 let aspect;
 
 // Track keys being pressed
@@ -22,7 +22,7 @@ const keyState = {
 };
 // Movement speed
 const MOVEMENT_SPEED = 0.05;
-const TRAILER_TRAVEL = 3; // Constant travel distance for the trailer
+const TRAILER_TRAVEL = -3; // Constant travel distance for the trailer
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -61,7 +61,7 @@ function createCameras() {
 
     // Create perspective camera (original camera)
     camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
-    camera.position.set(3, 3, -3);
+    camera.position.set(3, 3, 3);
     camera.lookAt(0, 0, 0);
     scene.add(camera);
 
@@ -118,16 +118,16 @@ function createTrailer() {
     // Helper function to create and position wheels
 
     // Add four wheels using the helper function
-    addWheel(0.5, -0.75, 1.25+TRAILER_TRAVEL, trailer); // Left side rear wheel
-    addWheel(0.5, -0.75, 0.90+TRAILER_TRAVEL, trailer); // Left side front wheel
-    addWheel(-0.5, -0.75, 1.25+TRAILER_TRAVEL, trailer); // Right side rear wheel
-    addWheel(-0.5, -0.75, 0.90+TRAILER_TRAVEL, trailer); // Right side front wheel
+    addWheel(0.5, -0.75, -1.25+TRAILER_TRAVEL, trailer); // Left side rear wheel
+    addWheel(0.5, -0.75, -0.90+TRAILER_TRAVEL, trailer); // Left side front wheel
+    addWheel(-0.5, -0.75, -1.25+TRAILER_TRAVEL, trailer); // Right side rear wheel
+    addWheel(-0.5, -0.75, -0.90+TRAILER_TRAVEL, trailer); // Right side front wheel
 
     // Add trailer hitch - a cylinder in the middle bottom of the trailer
     const hitchMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 }); // Dark gray
     const hitchGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.1, 32);
     hitch = new THREE.Mesh(hitchGeometry, hitchMaterial);
-    hitch.position.set(0, -0.65, -1 + TRAILER_TRAVEL); // Center, bottom, back
+    hitch.position.set(0, -0.65, 1 + TRAILER_TRAVEL); // Center, bottom, back
     hitch.rotation.y = Math.PI / 2; // Rotate to be horizontal
     trailer.add(hitch); // Adicionar o trailer ao grupo
 
@@ -177,25 +177,26 @@ function createRobot() {
     robot.add(torso);
 
     // Create Head Group
-    const headGroup = new THREE.Group();
-    //var rotation_centre = current_height + 0.0875;
-    
+    const headRotationCentre = current_height + 0.35/4;
+    headGroup = new THREE.Group();
+    headGroup.position.set(0, headRotationCentre, 0);
+
+    const headOffset = current_height - headRotationCentre + 0.28;
 
     // Create Head Sphere
     const headGeometry = new THREE.SphereGeometry(0.1, 32, 32);
     const headMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
     const head = new THREE.Mesh(headGeometry, headMaterial);
-    current_height += 0.28;
-    head.position.set(0, current_height, 0);
+    head.position.set(0, headOffset, 0);
     headGroup.add(head);
 
     // Create Eyes
     const eyeGeometry = new THREE.SphereGeometry(0.015, 32, 32);
     const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    leftEye.position.set(-0.05, current_height, 0.1);
+    leftEye.position.set(-0.05, headOffset, 0.1);
     const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    rightEye.position.set(0.05, current_height, 0.1);
+    rightEye.position.set(0.05, headOffset, 0.1);
     headGroup.add(leftEye);
     headGroup.add(rightEye);
 
@@ -203,10 +204,10 @@ function createRobot() {
     const antennaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.1, 32);
     const antennaMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const leftAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
-    current_height += 0.1;
-    leftAntenna.position.set(-0.05, current_height, 0);
+    const antennaY = headOffset + 0.1;
+    leftAntenna.position.set(-0.05, antennaY, 0);
     const rightAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
-    rightAntenna.position.set(0.05, current_height, 0);
+    rightAntenna.position.set(0.05, antennaY, 0);
     headGroup.add(leftAntenna);
     headGroup.add(rightAntenna);
 
@@ -364,6 +365,13 @@ function onKeyDown(e) {
         case "ArrowLeft":
         case "ArrowRight":
             keyState[e.code] = true;
+            break;
+        // TODO: Limites de Rotação
+        case "KeyR": // Rotate head backward
+            headGroup.rotation.x -= 0.1; // Rotate head
+            break;
+        case "KeyF": // Rotate head forward
+            headGroup.rotation.x += 0.1; // Rotate head
             break;
     }
 }
