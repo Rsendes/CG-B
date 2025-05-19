@@ -177,11 +177,12 @@ function createRobot() {
     robot.add(torso);
 
     // Create Head Group
-    const headRotationCentre = current_height + 0.35/4;
+    const headRotationCentre = current_height + 0.35/2;
     headGroup = new THREE.Group();
     headGroup.position.set(0, headRotationCentre, 0);
 
     const headOffset = current_height - headRotationCentre + 0.28;
+ 
 
     // Create Head Sphere
     const headGeometry = new THREE.SphereGeometry(0.1, 32, 32);
@@ -366,12 +367,15 @@ function onKeyDown(e) {
         case "ArrowRight":
             keyState[e.code] = true;
             break;
-        // TODO: Limites de Rotação
-        case "KeyR": // Rotate head backward
-            headGroup.rotation.x -= 0.1; // Rotate head
+        case "KeyR": // Rotate head clockwise (0 to PI)
+            if (headGroup.rotation.x > -Math.PI) {
+                headGroup.rotation.x = Math.max(headGroup.rotation.x - 0.15, -Math.PI);
+            }
             break;
-        case "KeyF": // Rotate head forward
-            headGroup.rotation.x += 0.1; // Rotate head
+        case "KeyF": // Rotate head anticlockwise (PI to 0)
+            if (headGroup.rotation.x < 0) {
+                headGroup.rotation.x = Math.min(headGroup.rotation.x + 0.15, 0);
+            }
             break;
     }
 }
