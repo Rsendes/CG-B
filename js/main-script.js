@@ -10,8 +10,10 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 let camera, scene, renderer;
 let cameraFrontal, cameraLateral, cameraTop, cameraBottom;
 let currCamera;
-let trailer, hitch, robot, headGroup;
+let trailer, hitch, robot, headGroup, leftArmGroup, rightArmGroup;
 let aspect;
+let isWireframe = false; // Flag to toggle wireframe mode
+
 
 // Track keys being pressed
 const keyState = {
@@ -67,6 +69,25 @@ function createCameras() {
 
     // Set default camera
     currCamera = cameraFrontal;
+}
+
+function toggleWireframe() {
+    isWireframe = !isWireframe; // Use the correct variable name
+    console.log("Wireframe mode:", isWireframe ? "ON" : "OFF");
+    
+    // Go through all objects in the scene that have materials
+    scene.traverse(function(object) {
+        if (object.isMesh) {
+            // Handle both single materials and material arrays
+            if (Array.isArray(object.material)) {
+                object.material.forEach(material => {
+                    material.wireframe = isWireframe;
+                });
+            } else if (object.material) {
+                object.material.wireframe = isWireframe;
+            }
+        }
+    });
 }
 
 /////////////////////
@@ -157,8 +178,8 @@ function createRobot() {
     robot.add(waist);
 
     // Create Upper Wheels
-    addWheel(0.25, 0, 0, robot);
-    addWheel(-0.25, 0, 0, robot);
+    addWheel(0.25, -0.05, 0, robot);
+    addWheel(-0.25, -0.05, 0, robot);
 
     // Create Abdomen
     const abdomenGeometry = new THREE.BoxGeometry(0.3, 0.15, 0.3);
@@ -214,6 +235,47 @@ function createRobot() {
 
     robot.add(headGroup);
 
+    // Create Arms
+    leftArmGroup = new THREE.Group();
+    rightArmGroup = new THREE.Group();
+
+    const armOffset = current_height - 0.075;
+
+    leftArmGroup.position.set(-0.375, armOffset, -0.3);
+    rightArmGroup.position.set(0.375, armOffset, -0.3);
+
+    const armGeometry = new THREE.BoxGeometry(0.15, 0.5, 0.15);
+    const armMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+    const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+
+    // Create Exhaust Pipes
+    const exhaustGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.7, 32);
+    const exhaustMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const leftExhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+    const rightExhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+    leftExhaust.position.set(0, 0.1, -0.095);
+    rightExhaust.position.set(0, 0.1, -0.095);
+    leftArm.add(leftExhaust);
+    rightArm.add(rightExhaust);
+
+    rightArmGroup.add(rightArm);
+    leftArmGroup.add(leftArm);
+
+    // Create Forearms
+    const forearmGeometry = new THREE.BoxGeometry(0.15, 0.15, 0.55);
+    const forearmMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    const leftForearm = new THREE.Mesh(forearmGeometry, forearmMaterial);
+    const rightForearm = new THREE.Mesh(forearmGeometry, forearmMaterial);
+    leftForearm.position.set(0, -0.175, 0.35);
+    rightForearm.position.set(0, -0.175, 0.35);
+    leftArmGroup.add(leftForearm);
+    rightArmGroup.add(rightForearm);
+
+    robot.add(leftArmGroup);
+    robot.add(rightArmGroup);
+    
+
     scene.add(robot);
 }
 
@@ -222,8 +284,11 @@ function createRobot() {
 /* CHECK COLLISIONS */
 //////////////////////
 function checkCollisions() {
+    // Create bounding boxes for collision detection
     const trailerBoundingBox = new THREE.Box3().setFromObject(trailer);
     const robotBoundingBox = new THREE.Box3().setFromObject(robot);
+    
+    // Standard collision check
     return trailerBoundingBox.intersectsBox(robotBoundingBox);
 }
 
@@ -231,9 +296,32 @@ function checkCollisions() {
 /* HANDLE COLLISIONS */
 ///////////////////////
 function handleCollisions(prevPosition) {
-    // If there's a collision, revert to previous position
+    // If there's a collision, handle it with proper contact
     if (checkCollisions()) {
+        // Get the current direction of movement
+        const moveDirection = new THREE.Vector3().subVectors(trailer.position, prevPosition).normalize();
+        
+        // Step back to previous position first
         trailer.position.copy(prevPosition);
+        
+        // Try to find the exact collision point by incrementally moving
+        const smallStep = 0.01; // Small incremental step
+        let testPosition = prevPosition.clone();
+        let isColliding = false;
+        
+        // Move in small increments until finding collision point
+        while (!isColliding) {
+            testPosition.addScaledVector(moveDirection, smallStep);
+            trailer.position.copy(testPosition);
+            
+            isColliding = checkCollisions();
+            
+            // If we detect collision, move back one step
+            if (isColliding) {
+                trailer.position.addScaledVector(moveDirection, -smallStep);
+                break;
+            }
+        }
     }
 }
 
@@ -360,6 +448,9 @@ function onKeyDown(e) {
         case "Digit5": // '5' - Bottom camera
             currCamera = cameraBottom;
             break;
+        case "Digit7": // '7' - Toggle wireframe mode
+            toggleWireframe();
+            break;
         // Track arrow keys for trailer movement
         case "ArrowUp":
         case "ArrowDown":
@@ -375,6 +466,18 @@ function onKeyDown(e) {
         case "KeyF": // Rotate head anticlockwise (PI to 0)
             if (headGroup.rotation.x < 0) {
                 headGroup.rotation.x = Math.min(headGroup.rotation.x + 0.15, 0);
+            }
+            break;
+        case "KeyE": // Translate Arms Outwards
+            if (leftArmGroup.position.x > -0.35) {
+                leftArmGroup.position.x -= 0.05;
+                rightArmGroup.position.x += 0.05;
+            }
+            break;
+        case "KeyD": // Translate Arms Inwards
+            if (leftArmGroup.position.x < -0.25) {
+                leftArmGroup.position.x += 0.05;
+                rightArmGroup.position.x -= 0.05;
             }
             break;
     }

@@ -21,25 +21,43 @@
             font-family: Arial, sans-serif;
         }
         
-        #hud {
+        .hud {
             position: absolute;
             bottom: 20px;
-            right: 20px;
             color: white;
-            background-color: rgba(255, 255, 255, 0.5);
-            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 15px;
             border-radius: 5px;
+            width: 280px;
         }
         
-        .keys {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+        #right-hud {
+            right: 20px;
         }
         
-        .numbers, .letters {
+        #left-hud {
+            left: 20px;
+        }
+        
+        .control-section {
+            margin-bottom: 15px;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+        
+        .control-item {
             display: flex;
-            gap: 5px;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .control-label {
+            flex: 1;
+            margin-right: 10px;
         }
         
         .key {
@@ -60,14 +78,62 @@
   </head>
 
   <body>
-    <div id="hud">
-        <div class="keys">
-            <div class="numbers">
+    <!-- Right-side HUD for camera controls -->
+    <div id="right-hud" class="hud">
+        <!-- Camera Controls Section -->
+        <div class="control-section">
+            <div class="section-title">Camera Views</div>
+            <div class="control-item">
+                <span class="control-label">Frontal Camera</span>
                 <div class="key" id="key1" title="Frontal Camera">1</div>
+            </div>
+            <div class="control-item">
+                <span class="control-label">Lateral Camera</span>
                 <div class="key" id="key2" title="Lateral Camera">2</div>
+            </div>
+            <div class="control-item">
+                <span class="control-label">Top Camera</span>
                 <div class="key" id="key3" title="Top Camera">3</div>
+            </div>
+            <div class="control-item">
+                <span class="control-label">Perspective Camera</span>
                 <div class="key" id="key4" title="Perspective Camera">4</div>
+            </div>
+            <div class="control-item">
+                <span class="control-label">Bottom Camera</span>
                 <div class="key" id="key5" title="Bottom Camera">5</div>
+            </div>
+        </div>
+        <!-- Display Options Section -->
+        <div class="control-section">
+            <div class="section-title">Display Options</div>
+            <div class="control-item">
+                <span class="control-label">Toggle Wireframe</span>
+                <div class="key" id="key7" title="Toggle Wireframe">7</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Left-side HUD for robot controls and display options -->
+    <div id="left-hud" class="hud">
+        <!-- Head Rotation Controls Section -->
+        <div class="control-section">
+            <div class="section-title">Movements</div>
+            <div class="control-item">
+                <span class="control-label">Rotate Backward</span>
+                <div class="key" id="keyR" title="Rotate Head Backward (Looking Up)">R</div>
+            </div>
+            <div class="control-item">
+                <span class="control-label">Rotate Forward</span>
+                <div class="key" id="keyF" title="Rotate Head Forward (Looking Down)">F</div>
+            </div>
+            <div class="control-item">
+                <span class="control-label">Arms Outwards</span>
+                <div class="key" id="keyE" title="Translate Arms Outwards">E</div>
+            </div>
+            <div class="control-item">
+                <span class="control-label">Arms Inwards</span>
+                <div class="key" id="keyD" title="Translate Arms Outwards">D</div>
             </div>
         </div>
     </div>
