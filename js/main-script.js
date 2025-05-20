@@ -10,7 +10,8 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 let camera, scene, renderer;
 let cameraFrontal, cameraLateral, cameraTop, cameraBottom;
 let currCamera;
-let trailer, hitch, robot, headGroup, leftArmGroup, rightArmGroup;
+let trailer, hitch, robot, headGroup, leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup;
+let leftFoot, rightFoot, leftFootGroup, rightFootGroup;
 let aspect;
 let isWireframe = false; // Flag to toggle wireframe mode
 
@@ -73,7 +74,7 @@ function createCameras() {
 
 function toggleWireframe() {
     isWireframe = !isWireframe; // Use the correct variable name
-    console.log("Wireframe mode:", isWireframe ? "ON" : "OFF");
+    
     
     // Go through all objects in the scene that have materials
     scene.traverse(function(object) {
@@ -223,10 +224,10 @@ function createRobot() {
     headGroup.add(rightEye);
 
     // Create Antennas
-    const antennaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.1, 32);
+    const antennaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.05, 32);
     const antennaMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const leftAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
-    const antennaY = headOffset + 0.1;
+    const antennaY = headOffset + 0.105;
     leftAntenna.position.set(-0.05, antennaY, 0);
     const rightAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
     rightAntenna.position.set(0.05, antennaY, 0);
@@ -264,7 +265,7 @@ function createRobot() {
 
     // Create Forearms
     const forearmGeometry = new THREE.BoxGeometry(0.15, 0.15, 0.55);
-    const forearmMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    const forearmMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
     const leftForearm = new THREE.Mesh(forearmGeometry, forearmMaterial);
     const rightForearm = new THREE.Mesh(forearmGeometry, forearmMaterial);
     leftForearm.position.set(0, -0.175, 0.35);
@@ -274,8 +275,67 @@ function createRobot() {
 
     robot.add(leftArmGroup);
     robot.add(rightArmGroup);
-    
 
+    // Create Thighs
+    leftLegGroup = new THREE.Group();
+    rightLegGroup = new THREE.Group();
+
+
+    leftLegGroup.position.set(0, -0.05, 0);
+    rightLegGroup.position.set(0, -0.05, 0);
+
+    const thighGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.15);
+    const thighMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const leftThigh = new THREE.Mesh(thighGeometry, thighMaterial);
+    const rightThigh = new THREE.Mesh(thighGeometry, thighMaterial);
+    leftThigh.position.set(-0.125, - 0.2, 0);
+    rightThigh.position.set(0.125, - 0.2, 0);
+
+    leftLegGroup.add(leftThigh);
+    rightLegGroup.add(rightThigh);
+
+    // Create Legs
+    const legGeometry = new THREE.BoxGeometry(0.15, 0.9, 0.25);
+    const legMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+    const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+    const legHeight = -0.55 - 0.15 - 0.1;
+    leftLeg.position.set(-0.125, legHeight, 0);
+    rightLeg.position.set(0.125, legHeight, 0);
+    leftLegGroup.add(leftLeg);
+    rightLegGroup.add(rightLeg);
+
+    // Create Leg Wheels
+    addWheel(-0.125, 0.05, 0, leftLeg);
+    addWheel(-0.125, -0.3, 0, leftLeg);
+    addWheel(0.125, 0.05, 0, rightLeg);
+    addWheel(0.125, -0.3, 0, rightLeg);
+    
+    // Create Feet
+    rightFootGroup = new THREE.Group();
+    leftFootGroup = new THREE.Group();
+
+    const footHeight = -0.375;
+
+    leftFootGroup.position.set(0, footHeight, 0.075);
+    rightFootGroup.position.set(0, footHeight, 0.075);
+
+    const footGeometry = new THREE.BoxGeometry(0.25, 0.15, 0.1);
+    const footMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    leftFoot = new THREE.Mesh(footGeometry, footMaterial);
+    rightFoot = new THREE.Mesh(footGeometry, footMaterial);
+    
+    leftFoot.position.set(-0.05, 0, 0.1);
+    rightFoot.position.set(0.05, 0, 0.1);
+    leftFootGroup.add(leftFoot);
+    rightFootGroup.add(rightFoot);
+
+    leftLeg.add(leftFootGroup);
+    rightLeg.add(rightFootGroup);
+
+    robot.add(leftLegGroup);
+    robot.add(rightLegGroup);
+    
     scene.add(robot);
 }
 
@@ -480,7 +540,31 @@ function onKeyDown(e) {
                 rightArmGroup.position.x -= 0.05;
             }
             break;
-    }
+        case "KeyW": // Rotate Legs Forwards (to in front)
+            if (leftLegGroup.rotation.x < Math.PI/2) {
+                leftLegGroup.rotation.x = Math.min(leftLegGroup.rotation.x + 0.15, Math.PI/2);
+                rightLegGroup.rotation.x = leftLegGroup.rotation.x;
+            }
+            break;
+        case "KeyS": // Rotate Legs Backwards (to standing)
+            if (leftLegGroup.rotation.x > 0) {
+                leftLegGroup.rotation.x = Math.max(leftLegGroup.rotation.x - 0.15, 0);
+                rightLegGroup.rotation.x = leftLegGroup.rotation.x;
+            }
+            break;
+        case "KeyA": // Rotate Legs Outwards
+            if (leftFootGroup.rotation.x < Math.PI/2) {
+                leftFootGroup.rotation.x = Math.min(leftFootGroup.rotation.x + 0.15, Math.PI/2);
+                rightFootGroup.rotation.x = leftFootGroup.rotation.x;
+            }
+            break;
+        case "KeyQ": // Rotate Legs Inwards
+            if (leftFootGroup.rotation.x > 0) {
+                leftFootGroup.rotation.x = Math.max(leftFootGroup.rotation.x - 0.15, 0);
+                rightFootGroup.rotation.x = leftFootGroup.rotation.x;
+            }
+            break;
+        }
 }
 
 ///////////////////////
