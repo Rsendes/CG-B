@@ -119,9 +119,10 @@ function createObjects() {
 function createTrailer() {
     // Create a trailer group object
     trailer = new THREE.Group();
+    trailer.position.set(0, 0.6, TRAILER_TRAVEL); // Set initial position
     
     // Add a trailer with different colors for each face
-    const geometry = new THREE.BoxGeometry(1, 1.2, 3);
+    const geometry = new THREE.BoxGeometry(0.7, 1, 2.5);
     
     // Create materials array - one for each face
     const materials = [
@@ -134,22 +135,22 @@ function createTrailer() {
     ];
     
     const trailerBody = new THREE.Mesh(geometry, materials);
-    trailerBody.position.set(0, 0, TRAILER_TRAVEL); // Position the trailer
+    trailerBody.position.set(0, 0, 0); // Position the trailer
     trailer.add(trailerBody); // Adicionar o corpo ao grupo em vez da cena
 
     // Helper function to create and position wheels
 
     // Add four wheels using the helper function
-    addWheel(0.5, -0.75, -1.25+TRAILER_TRAVEL, trailer); // Left side rear wheel
-    addWheel(0.5, -0.75, -0.90+TRAILER_TRAVEL, trailer); // Left side front wheel
-    addWheel(-0.5, -0.75, -1.25+TRAILER_TRAVEL, trailer); // Right side rear wheel
-    addWheel(-0.5, -0.75, -0.90+TRAILER_TRAVEL, trailer); // Right side front wheel
+    addWheel(0.25, -0.65, -1, trailer); // Left side rear wheel
+    addWheel(0.25, -0.65, -0.65, trailer); // Left side front wheel
+    addWheel(-0.25, -0.65, -1, trailer); // Right side rear wheel
+    addWheel(-0.25, -0.65, -0.65, trailer); // Right side front wheel
 
     // Add trailer hitch - a cylinder in the middle bottom of the trailer
     const hitchMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 }); // Dark gray
     const hitchGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.1, 32);
     hitch = new THREE.Mesh(hitchGeometry, hitchMaterial);
-    hitch.position.set(0, -0.65, 1 + TRAILER_TRAVEL); // Center, bottom, back
+    hitch.position.set(0, -0.55, 0.75); // Center, bottom, back
     hitch.rotation.y = Math.PI / 2; // Rotate to be horizontal
     trailer.add(hitch); // Adicionar o trailer ao grupo
 
