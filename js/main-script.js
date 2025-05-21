@@ -16,6 +16,7 @@ let aspect;
 let isWireframe = false; // Flag to toggle wireframe mode
 
 
+
 // Track keys being pressed
 const keyState = {
     ArrowUp: false,
@@ -316,18 +317,17 @@ function createRobot() {
     rightFootGroup = new THREE.Group();
     leftFootGroup = new THREE.Group();
 
-    const footHeight = -0.375;
 
-    leftFootGroup.position.set(0, footHeight, 0.075);
-    rightFootGroup.position.set(0, footHeight, 0.075);
+    leftFootGroup.position.set(0, -0.325, 0);
+    rightFootGroup.position.set(0, -0.325, 0);
 
-    const footGeometry = new THREE.BoxGeometry(0.25, 0.15, 0.1);
+    const footGeometry = new THREE.BoxGeometry(0.15, 0.25, 0.2);
     const footMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
     leftFoot = new THREE.Mesh(footGeometry, footMaterial);
     rightFoot = new THREE.Mesh(footGeometry, footMaterial);
     
-    leftFoot.position.set(-0.05, 0, 0.1);
-    rightFoot.position.set(0.05, 0, 0.1);
+    leftFoot.position.set(0, 0, 0.225);
+    rightFoot.position.set(0, 0, 0.225);
     leftFootGroup.add(leftFoot);
     rightFootGroup.add(rightFoot);
 
@@ -339,6 +339,7 @@ function createRobot() {
     
     scene.add(robot);
 }
+
 
 
 //////////////////////
@@ -405,7 +406,7 @@ function update() {
     if (keyState.ArrowRight) {
         trailer.position.x += MOVEMENT_SPEED;
     }
-    handleCollisions(prevPosition);
+    handleCollisions(prevPosition); // Pass the position *before* the current move
 }
 
 /////////////
