@@ -267,12 +267,12 @@ function createRobot() {
     leftArmGroup.add(leftArm);
 
     // Create Forearms
-    const forearmGeometry = new THREE.BoxGeometry(0.15, 0.15, 0.55);
+    const forearmGeometry = new THREE.BoxGeometry(0.15, 0.15, 0.452);
     const forearmMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
     const leftForearm = new THREE.Mesh(forearmGeometry, forearmMaterial);
     const rightForearm = new THREE.Mesh(forearmGeometry, forearmMaterial);
-    leftForearm.position.set(0, -0.175, 0.35);
-    rightForearm.position.set(0, -0.175, 0.35);
+    leftForearm.position.set(0, -0.175, 0.30);
+    rightForearm.position.set(0, -0.175, 0.30);
     leftArmGroup.add(leftForearm);
     rightArmGroup.add(rightForearm);
 
@@ -347,7 +347,7 @@ function createRobot() {
 function checkCollisions() {
     // Create bounding boxes for collision detection
     const minRobot = new THREE.Vector3(-0.3, -0.2, -1.45);
-    const maxRobot = new THREE.Vector3(0.3, 0.8, 0.325);
+    const maxRobot = new THREE.Vector3(0.3, 0.8, 0.225);
 
     // Fix the trailer bounding box to properly surround the entire trailer group
     // Include wheels (which extend to y=-0.8) and cover the full trailer length (2.5 units)
@@ -374,12 +374,6 @@ function checkCollisions() {
             scene.remove(child);
         }
     });
-
-    // Display bounding boxes with wireframes
-    const robotBoxHelper = new THREE.Box3Helper(robotBoundingBox, 0xff0000); // Red for robot
-    const trailerBoxHelper = new THREE.Box3Helper(trailerBoundingBox, 0xffff00); // Yellow for trailer
-    scene.add(robotBoxHelper);
-    scene.add(trailerBoxHelper);
 
     // Manual AABB collision detection
     return (
@@ -412,8 +406,6 @@ function handleCollisions() {
             const y_point = 0.6;
             const z_point = -1.70;
             trailer.position.set(x_point, y_point, z_point);
-            console.log("trailer",trailerBoundingBox);
-            console.log("robot",robotBoundingBox);
         }
     }
 }
