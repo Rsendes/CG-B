@@ -340,18 +340,24 @@ function createRobot() {
     scene.add(robot);
 }
 
-
-
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
 function checkCollisions() {
     // Create bounding boxes for collision detection
+    // !! Fazer check manualmente !!
     const trailerBoundingBox = new THREE.Box3().setFromObject(trailer);
     const robotBoundingBox = new THREE.Box3().setFromObject(robot);
     
     // Standard collision check
     return trailerBoundingBox.intersectsBox(robotBoundingBox);
+}
+
+// Function to check if the the robot is in truck form
+function checkClosed () {
+    return (leftArmGroup.position.x > -0.226 && headGroup.rotation.x == -Math.PI &&
+            leftLegGroup.rotation.x == Math.PI/2 && leftFootGroup.rotation.x == Math.PI/2);
+    
 }
 
 ///////////////////////
@@ -360,29 +366,12 @@ function checkCollisions() {
 function handleCollisions(prevPosition) {
     // If there's a collision, handle it with proper contact
     if (checkCollisions()) {
-        // Get the current direction of movement
-        const moveDirection = new THREE.Vector3().subVectors(trailer.position, prevPosition).normalize();
-        
-        // Step back to previous position first
-        trailer.position.copy(prevPosition);
-        
-        // Try to find the exact collision point by incrementally moving
-        const smallStep = 0.01; // Small incremental step
-        let testPosition = prevPosition.clone();
-        let isColliding = false;
-        
-        // Move in small increments until finding collision point
-        while (!isColliding) {
-            testPosition.addScaledVector(moveDirection, smallStep);
-            trailer.position.copy(testPosition);
-            
-            isColliding = checkCollisions();
-            
-            // If we detect collision, move back one step
-            if (isColliding) {
-                trailer.position.addScaledVector(moveDirection, -smallStep);
-                break;
-            }
+        if (checkClosed()) {
+            // Trnslate the trailer to hitch position
+            const x_point = 0
+            const y_point = 0.6;
+            const z_point = -1.70;
+            trailer.position.set(x_point, y_point, z_point);
         }
     }
 }
@@ -392,6 +381,8 @@ function handleCollisions(prevPosition) {
 ////////////
 function update() {
     const prevPosition = trailer.position.clone();
+
+    checkClosed(); // Check if the robot is in truck form
 
     // Move trailer based on which arrow keys are pressed
     if (keyState.ArrowUp) {
@@ -554,19 +545,31 @@ function onKeyDown(e) {
                 rightLegGroup.rotation.x = leftLegGroup.rotation.x;
             }
             break;
-        case "KeyA": // Rotate Legs Outwards
+        case "KeyA": // Rotate Feet Outwards
             if (leftFootGroup.rotation.x < Math.PI/2) {
                 leftFootGroup.rotation.x = Math.min(leftFootGroup.rotation.x + 0.15, Math.PI/2);
                 rightFootGroup.rotation.x = leftFootGroup.rotation.x;
             }
             break;
-        case "KeyQ": // Rotate Legs Inwards
+        case "KeyQ": // Rotate Feet Inwards
             if (leftFootGroup.rotation.x > 0) {
                 leftFootGroup.rotation.x = Math.max(leftFootGroup.rotation.x - 0.15, 0);
                 rightFootGroup.rotation.x = leftFootGroup.rotation.x;
             }
             break;
-        }
+        // Close the robot
+        case "KeyC":
+            leftArmGroup.position.x = -0.225;
+            rightArmGroup.position.x = 0.225;
+
+            headGroup.rotation.x = -Math.PI;
+            
+            leftLegGroup.rotation.x = Math.PI/2;
+            rightLegGroup.rotation.x = Math.PI/2;
+
+            leftFootGroup.rotation.x = Math.PI/2;
+            rightFootGroup.rotation.x = Math.PI/2;
+        }   
 }
 
 ///////////////////////
