@@ -14,6 +14,7 @@ let trailer, hitch, robot, headGroup, leftArmGroup, rightArmGroup, leftLegGroup,
 let leftFoot, rightFoot, leftFootGroup, rightFootGroup;
 let aspect;
 let isWireframe = false; // Flag to toggle wireframe mode
+let trailerBoundingBox, robotBoundingBox;
 
 
 
@@ -345,13 +346,52 @@ function createRobot() {
 //////////////////////
 function checkCollisions() {
     // Create bounding boxes for collision detection
-    // !! Fazer check manualmente !!
-    const trailerBoundingBox = new THREE.Box3().setFromObject(trailer);
-    const robotBoundingBox = new THREE.Box3().setFromObject(robot);
-    
-    // Standard collision check
-    return trailerBoundingBox.intersectsBox(robotBoundingBox);
+    const minRobot = new THREE.Vector3(-0.3, -0.2, -1.45);
+    const maxRobot = new THREE.Vector3(0.3, 0.8, 0.325);
+
+    // Fix the trailer bounding box to properly surround the entire trailer group
+    // Include wheels (which extend to y=-0.8) and cover the full trailer length (2.5 units)
+    const minTrailer = new THREE.Vector3(-0.35, -0.8, -1.25);
+    const maxTrailer = new THREE.Vector3(0.35, 0.5, 1.25);
+
+    // Get current positions for both objects
+    const currentRobotCenter = new THREE.Vector3(robot.position.x, robot.position.y, robot.position.z);
+    const currentTrailerCenter = new THREE.Vector3(trailer.position.x, trailer.position.y, trailer.position.z);
+
+    // Calculate absolute positions
+    const currentMinRobot = currentRobotCenter.clone().add(minRobot);
+    const currentMaxRobot = currentRobotCenter.clone().add(maxRobot);
+    const currentMinTrailer = currentTrailerCenter.clone().add(minTrailer);
+    const currentMaxTrailer = currentTrailerCenter.clone().add(maxTrailer);
+
+    // Create bounding boxes
+    robotBoundingBox = new THREE.Box3(currentMinRobot, currentMaxRobot);
+    trailerBoundingBox = new THREE.Box3(currentMinTrailer, currentMaxTrailer);
+
+    // Remove any existing box helpers to prevent buildup
+    scene.children.forEach(child => {
+        if (child instanceof THREE.Box3Helper) {
+            scene.remove(child);
+        }
+    });
+
+    // Display bounding boxes with wireframes
+    const robotBoxHelper = new THREE.Box3Helper(robotBoundingBox, 0xff0000); // Red for robot
+    const trailerBoxHelper = new THREE.Box3Helper(trailerBoundingBox, 0xffff00); // Yellow for trailer
+    scene.add(robotBoxHelper);
+    scene.add(trailerBoxHelper);
+
+    // Manual AABB collision detection
+    return (
+        currentMinRobot.x <= currentMaxTrailer.x &&
+        currentMaxRobot.x >= currentMinTrailer.x &&
+        currentMinRobot.y <= currentMaxTrailer.y &&
+        currentMaxRobot.y >= currentMinTrailer.y &&
+        currentMinRobot.z <= currentMaxTrailer.z &&
+        currentMaxRobot.z >= currentMinTrailer.z
+    );
 }
+
 
 // Function to check if the the robot is in truck form
 function checkClosed () {
@@ -363,7 +403,7 @@ function checkClosed () {
 ///////////////////////
 /* HANDLE COLLISIONS */
 ///////////////////////
-function handleCollisions(prevPosition) {
+function handleCollisions() {
     // If there's a collision, handle it with proper contact
     if (checkCollisions()) {
         if (checkClosed()) {
@@ -372,6 +412,8 @@ function handleCollisions(prevPosition) {
             const y_point = 0.6;
             const z_point = -1.70;
             trailer.position.set(x_point, y_point, z_point);
+            console.log("trailer",trailerBoundingBox);
+            console.log("robot",robotBoundingBox);
         }
     }
 }
@@ -380,10 +422,6 @@ function handleCollisions(prevPosition) {
 /* UPDATE */
 ////////////
 function update() {
-    const prevPosition = trailer.position.clone();
-
-    checkClosed(); // Check if the robot is in truck form
-
     // Move trailer based on which arrow keys are pressed
     if (keyState.ArrowUp) {
         trailer.position.z -= MOVEMENT_SPEED;
@@ -397,7 +435,7 @@ function update() {
     if (keyState.ArrowRight) {
         trailer.position.x += MOVEMENT_SPEED;
     }
-    handleCollisions(prevPosition); // Pass the position *before* the current move
+    handleCollisions(); // Pass the position *before* the current move
 }
 
 /////////////
