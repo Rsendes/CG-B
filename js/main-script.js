@@ -23,6 +23,16 @@ let trailerAnimationEndPos = new THREE.Vector3();
 let trailerAnimationProgress = 0;
 const TRAILER_ANIMATION_SPEED = 0.03; // Adjust speed as needed
 
+// Adicione estas variáveis globais:
+let isRobotTransforming = false;
+let transformationProgress = 0;
+const TRANSFORM_SPEED = 2.0; // Velocidade de transformação
+
+// Armazene as posições iniciais e finais para cada componente
+let startArmPosX, endArmPosX;
+let startHeadRotX, endHeadRotX;
+let startLegRotX, endLegRotX;
+let startFootRotX, endFootRotX;
 
 // Track keys being pressed
 const keyState = {
@@ -114,13 +124,6 @@ function createObjects() {
 
     createRobot(); // Create the robot
     
-    // Add a grid helper to the scene
-    const gridHelper = new THREE.GridHelper(10, 10);
-    scene.add(gridHelper);
-
-    // Add axes helper to the scene
-    const axesHelper = new THREE.AxesHelper(5);
-    scene.add(axesHelper);
 }
 
 function createTrailer() {
@@ -133,12 +136,12 @@ function createTrailer() {
     
     // Create materials array - one for each face
     const materials = [
-        new THREE.MeshBasicMaterial({ color: 0xff0000 }), // Right face (positive X)
-        new THREE.MeshBasicMaterial({ color: 0x00ff00 }), // Left face (negative X)
-        new THREE.MeshBasicMaterial({ color: 0x0000ff }), // Top face (positive Y)
-        new THREE.MeshBasicMaterial({ color: 0xffff00 }), // Bottom face (negative Y)
-        new THREE.MeshBasicMaterial({ color: 0xff00ff }), // Front face (positive Z)
-        new THREE.MeshBasicMaterial({ color: 0x00ffff })  // Back face (negative Z)
+        new THREE.MeshBasicMaterial({ color: 0x666666 }), // Right face (positive X)
+        new THREE.MeshBasicMaterial({ color: 0xAAAAAA }), // Left face (negative X)
+        new THREE.MeshBasicMaterial({ color: 0x999999 }), // Top face (positive Y)
+        new THREE.MeshBasicMaterial({ color: 0x999999 }), // Bottom face (negative Y)
+        new THREE.MeshBasicMaterial({ color: 0xAAAAAA }), // Front face (positive Z)
+        new THREE.MeshBasicMaterial({ color: 0xAAAAAA })  // Back face (negative Z)
     ];
     
     const trailerBody = new THREE.Mesh(geometry, materials);
@@ -182,7 +185,7 @@ function createRobot() {
 
     // Create Waist
     const waistGeometry = new THREE.BoxGeometry(0.4, 0.2, 0.3);
-    const waistMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const waistMaterial = new THREE.MeshBasicMaterial({ color: 0x9f1d1d });
     const waist = new THREE.Mesh(waistGeometry, waistMaterial);
     robot.add(waist);
 
@@ -192,7 +195,7 @@ function createRobot() {
 
     // Create Abdomen
     const abdomenGeometry = new THREE.BoxGeometry(0.3, 0.15, 0.3);
-    const abdomenMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    const abdomenMaterial = new THREE.MeshBasicMaterial({ color: 0x4e6ba7 });
     const abdomen = new THREE.Mesh(abdomenGeometry, abdomenMaterial);
     current_height += 0.175;
     abdomen.position.set(0, current_height, 0);
@@ -200,7 +203,7 @@ function createRobot() {
 
     // Create Torso
     const torsoGeometry = new THREE.BoxGeometry(0.6, 0.35, 0.45);
-    const torsoMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const torsoMaterial = new THREE.MeshBasicMaterial({ color: 0xb40808 });
     const torso = new THREE.Mesh(torsoGeometry, torsoMaterial);
     current_height += 0.25;
     torso.position.set(0, current_height, 0);
@@ -215,14 +218,14 @@ function createRobot() {
  
 
     // Create Head Sphere
-    const headGeometry = new THREE.SphereGeometry(0.1, 32, 32);
-    const headMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const headGeometry = new THREE.SphereGeometry(0.1, 12, 12);
+    const headMaterial = new THREE.MeshBasicMaterial({ color: 0x4e6ba7 });
     const head = new THREE.Mesh(headGeometry, headMaterial);
     head.position.set(0, headOffset, 0);
     headGroup.add(head);
 
     // Create Eyes
-    const eyeGeometry = new THREE.SphereGeometry(0.015, 32, 32);
+    const eyeGeometry = new THREE.SphereGeometry(0.015, 12, 12);
     const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
     leftEye.position.set(-0.05, headOffset, 0.1);
@@ -254,7 +257,7 @@ function createRobot() {
     rightArmGroup.position.set(0.375, armOffset, -0.3);
 
     const armGeometry = new THREE.BoxGeometry(0.15, 0.5, 0.15);
-    const armMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const armMaterial = new THREE.MeshBasicMaterial({ color: 0x9f1d1d });
     const leftArm = new THREE.Mesh(armGeometry, armMaterial);
     const rightArm = new THREE.Mesh(armGeometry, armMaterial);
 
@@ -273,9 +276,16 @@ function createRobot() {
 
     // Create Forearms
     const forearmGeometry = new THREE.BoxGeometry(0.15, 0.15, 0.452);
-    const forearmMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-    const leftForearm = new THREE.Mesh(forearmGeometry, forearmMaterial);
-    const rightForearm = new THREE.Mesh(forearmGeometry, forearmMaterial);
+    const forearmMaterials = [
+    new THREE.MeshBasicMaterial({ color: 0x4e6ba7 }), // Right face
+    new THREE.MeshBasicMaterial({ color: 0x4e6ba7 }), // Left face
+    new THREE.MeshBasicMaterial({ color: 0x4e6ba7 }), // Top face
+    new THREE.MeshBasicMaterial({ color: 0x4e6ba7 }), // Bottom face
+    new THREE.MeshBasicMaterial({ color: 0xffff00 }), // Front face (amarela)
+    new THREE.MeshBasicMaterial({ color: 0x4e6ba7 })  // Back face
+    ];
+    const leftForearm = new THREE.Mesh(forearmGeometry, forearmMaterials);
+    const rightForearm = new THREE.Mesh(forearmGeometry, forearmMaterials);
     leftForearm.position.set(0, -0.175, 0.30);
     rightForearm.position.set(0, -0.175, 0.30);
     leftArmGroup.add(leftForearm);
@@ -293,7 +303,7 @@ function createRobot() {
     rightLegGroup.position.set(0, -0.05, 0);
 
     const thighGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.15);
-    const thighMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const thighMaterial = new THREE.MeshBasicMaterial({ color: 0x4e6ba7 });
     const leftThigh = new THREE.Mesh(thighGeometry, thighMaterial);
     const rightThigh = new THREE.Mesh(thighGeometry, thighMaterial);
     leftThigh.position.set(-0.125, - 0.2, 0);
@@ -304,7 +314,7 @@ function createRobot() {
 
     // Create Legs
     const legGeometry = new THREE.BoxGeometry(0.15, 0.9, 0.25);
-    const legMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const legMaterial = new THREE.MeshBasicMaterial({ color: 0x999999 });
     const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
     const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
     const legHeight = -0.55 - 0.15 - 0.1;
@@ -328,7 +338,7 @@ function createRobot() {
     rightFootGroup.position.set(0, -0.325, 0);
 
     const footGeometry = new THREE.BoxGeometry(0.15, 0.25, 0.2);
-    const footMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    const footMaterial = new THREE.MeshBasicMaterial({ color: 0x4e6ba7 });
     leftFoot = new THREE.Mesh(footGeometry, footMaterial);
     rightFoot = new THREE.Mesh(footGeometry, footMaterial);
     
@@ -399,6 +409,9 @@ function checkClosed () {
     
 }
 
+///////////////////////
+/* HANDLE COLLISIONS */
+///////////////////////
 function handleCollisions() {
     // If there's a collision, handle it with proper contact
     if (checkCollisions()) {
@@ -418,7 +431,9 @@ function handleCollisions() {
     }
 }
 
-
+////////////
+/* UPDATE */
+////////////
 // Update the update() function to handle the animation
 function update() {
     // Obter o delta time (tempo desde o último frame em segundos)
@@ -426,6 +441,36 @@ function update() {
     
     // Calcular movimento baseado no tempo
     const frameSpeed = BASE_SPEED * deltaTime;
+
+    // Handle robot transformation if active
+    if (isRobotTransforming) {
+        // Incrementar progresso baseado no tempo
+        transformationProgress += deltaTime * TRANSFORM_SPEED;
+    
+        // Limitar progresso a 1.0 (100%)
+        if (transformationProgress >= 1.0) {
+            transformationProgress = 1.0;
+            isRobotTransforming = false;
+        }
+    
+        // Aplicar interpolação linear em cada componente
+        const t = transformationProgress;
+    
+        // Animar braços
+        leftArmGroup.position.x = startArmPosX + t * (endArmPosX - startArmPosX);
+        rightArmGroup.position.x = -leftArmGroup.position.x;
+    
+        // Animar cabeça
+        headGroup.rotation.x = startHeadRotX + t * (endHeadRotX - startHeadRotX);
+    
+        // Animar pernas
+        leftLegGroup.rotation.x = startLegRotX + t * (endLegRotX - startLegRotX);
+        rightLegGroup.rotation.x = leftLegGroup.rotation.x;
+    
+        // Animar pés
+        leftFootGroup.rotation.x = startFootRotX + t * (endFootRotX - startFootRotX);
+        rightFootGroup.rotation.x = leftFootGroup.rotation.x;
+    }
     
     // Handle trailer animation if active
     if (isAnimatingTrailer) {
@@ -634,17 +679,48 @@ function onKeyDown(e) {
             }
             break;
         case "KeyC": // Close the robot
-            leftArmGroup.position.x = -0.225;
-            rightArmGroup.position.x = 0.225;
-
-            headGroup.rotation.x = -Math.PI;
-            
-            leftLegGroup.rotation.x = Math.PI/2;
-            rightLegGroup.rotation.x = Math.PI/2;
-
-            leftFootGroup.rotation.x = Math.PI/2;
-            rightFootGroup.rotation.x = Math.PI/2;
-        }   
+            if (!isRobotTransforming) {
+                // Iniciar transformação
+                isRobotTransforming = true;
+        
+                // Armazenar valores iniciais
+                startArmPosX = leftArmGroup.position.x;
+                startHeadRotX = headGroup.rotation.x;
+                startLegRotX = leftLegGroup.rotation.x;
+                startFootRotX = leftFootGroup.rotation.x;
+        
+                // Definir valores finais
+                endArmPosX = -0.225;
+                endHeadRotX = -Math.PI;
+                endLegRotX = Math.PI/2;
+                endFootRotX = Math.PI/2;
+        
+                // Reiniciar progresso
+                transformationProgress = 0;
+            }
+            break;
+        case "KeyV": // Open the robot (transform back)
+            if (!isRobotTransforming) {
+                // Iniciar transformação
+                isRobotTransforming = true;
+                
+                // Armazenar valores iniciais (posição atual)
+                startArmPosX = leftArmGroup.position.x;
+                startHeadRotX = headGroup.rotation.x;
+                startLegRotX = leftLegGroup.rotation.x;
+                startFootRotX = leftFootGroup.rotation.x;
+                
+                // Definir valores finais (posição de robô)
+                endArmPosX = -0.375; // Posição original dos braços
+                endHeadRotX = 0;     // Cabeça olhando para frente
+                endLegRotX = 0;      // Pernas esticadas para baixo
+                endFootRotX = 0;     // Pés retos
+                
+                // Reiniciar progresso
+                transformationProgress = 0;
+            }
+            break;   
+    }
 }
 
 ///////////////////////
