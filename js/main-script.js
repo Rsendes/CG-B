@@ -8,14 +8,20 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 /* GLOBAL VARIABLES */
 //////////////////////
 let camera, scene, renderer;
-let cameraFrontal, cameraLateral, cameraTop, cameraBottom;
+let cameraFrontal, cameraLateral, cameraTop;
 let currCamera;
 let trailer, hitch, robot, headGroup, leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup;
 let leftFoot, rightFoot, leftFootGroup, rightFootGroup;
 let aspect;
+let clock; // Clock para medir o tempo entre frames
+const BASE_SPEED = 2.0; // Velocidade base em unidades por segundo
 let isWireframe = false; // Flag to toggle wireframe mode
 let trailerBoundingBox, robotBoundingBox;
-
+let isAnimatingTrailer = false;
+let trailerAnimationStartPos = new THREE.Vector3();
+let trailerAnimationEndPos = new THREE.Vector3();
+let trailerAnimationProgress = 0;
+const TRAILER_ANIMATION_SPEED = 0.03; // Adjust speed as needed
 
 
 // Track keys being pressed
@@ -25,8 +31,8 @@ const keyState = {
     ArrowLeft: false,
     ArrowRight: false
 };
-// Movement speed
-const MOVEMENT_SPEED = 0.05;
+
+// Movement speed  
 const TRAILER_TRAVEL = -3; // Constant travel distance for the trailer
 
 /////////////////////
@@ -62,7 +68,6 @@ function createCameras() {
     cameraFrontal = createOrthographicCamera(0, 0, 3);
     cameraLateral = createOrthographicCamera(3, 0, 0);
     cameraTop = createOrthographicCamera(0, 3, 0);
-    cameraBottom = createOrthographicCamera(0, -3, 0);
 
     // Create perspective camera (original camera)
     camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
@@ -394,40 +399,81 @@ function checkClosed () {
     
 }
 
-///////////////////////
-/* HANDLE COLLISIONS */
-///////////////////////
 function handleCollisions() {
     // If there's a collision, handle it with proper contact
     if (checkCollisions()) {
-        if (checkClosed()) {
-            // Trnslate the trailer to hitch position
-            const x_point = 0
-            const y_point = 0.6;
-            const z_point = -1.70;
-            trailer.position.set(x_point, y_point, z_point);
+        if (checkClosed() && !isAnimatingTrailer) {
+            // Start animating to hitch position
+            isAnimatingTrailer = true;
+            
+            // Store starting position (current position at collision)
+            trailerAnimationStartPos.copy(trailer.position);
+            
+            // Set target position (hitch position)
+            trailerAnimationEndPos.set(0, 0.6, -1.70);
+            
+            // Reset animation progress
+            trailerAnimationProgress = 0;
         }
     }
 }
 
-////////////
-/* UPDATE */
-////////////
+
+// Update the update() function to handle the animation
 function update() {
-    // Move trailer based on which arrow keys are pressed
-    if (keyState.ArrowUp) {
-        trailer.position.z -= MOVEMENT_SPEED;
+    // Obter o delta time (tempo desde o último frame em segundos)
+    const deltaTime = clock.getDelta();
+    
+    // Calcular movimento baseado no tempo
+    const frameSpeed = BASE_SPEED * deltaTime;
+    
+    // Handle trailer animation if active
+    if (isAnimatingTrailer) {
+        // Calcular direção - simples subtração de vetores
+        const dx = trailerAnimationEndPos.x - trailer.position.x;
+        const dy = trailerAnimationEndPos.y - trailer.position.y;
+        const dz = trailerAnimationEndPos.z - trailer.position.z;
+        
+        // Calcular distância total restante até o destino
+        const distanceRemaining = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        
+        // Verificar se chegamos ao destino
+        if (distanceRemaining < frameSpeed) {
+            // Animação completa - colocar exatamente na posição final
+            trailer.position.x = trailerAnimationEndPos.x;
+            trailer.position.y = trailerAnimationEndPos.y;
+            trailer.position.z = trailerAnimationEndPos.z;
+            isAnimatingTrailer = false;
+        } else {
+            // Normalizar a direção (criar um vetor unitário)
+            const length = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            const ndx = dx / length;
+            const ndy = dy / length;
+            const ndz = dz / length;
+            
+            // Mover um passo na direção certa com velocidade baseada no tempo
+            trailer.position.x += ndx * frameSpeed;
+            trailer.position.y += ndy * frameSpeed;
+            trailer.position.z += ndz * frameSpeed;
+        }
+    } else {
+        // Only allow movement if not animating
+        // Move trailer based on which arrow keys are pressed, com velocidade baseada no tempo
+        if (keyState.ArrowUp) {
+            trailer.position.z -= frameSpeed;
+        }
+        if (keyState.ArrowDown) {
+            trailer.position.z += frameSpeed;
+        }
+        if (keyState.ArrowLeft) {
+            trailer.position.x -= frameSpeed;
+        }
+        if (keyState.ArrowRight) {
+            trailer.position.x += frameSpeed;
+        }
     }
-    if (keyState.ArrowDown) {
-        trailer.position.z += MOVEMENT_SPEED;
-    }
-    if (keyState.ArrowLeft) {
-        trailer.position.x -= MOVEMENT_SPEED;
-    }
-    if (keyState.ArrowRight) {
-        trailer.position.x += MOVEMENT_SPEED;
-    }
-    handleCollisions(); // Pass the position *before* the current move
+    
+    handleCollisions(); // Check for collisions after movement
 }
 
 /////////////
@@ -450,6 +496,10 @@ function init() {
     
     // Create objects
     createObjects();
+
+    // Initialize clock
+    clock = new THREE.Clock();
+    clock.start();
 
     // Create a renderer
     renderer = new THREE.WebGLRenderer();
@@ -506,7 +556,6 @@ function onResize() {
         updateOrthographicCamera(cameraFrontal);
         updateOrthographicCamera(cameraLateral);
         updateOrthographicCamera(cameraTop);
-        updateOrthographicCamera(cameraBottom);
     }
 }
 
@@ -527,9 +576,6 @@ function onKeyDown(e) {
             break;
         case "Digit4": // '4' - Original perspective camera
             currCamera = camera;
-            break;
-        case "Digit5": // '5' - Bottom camera
-            currCamera = cameraBottom;
             break;
         case "Digit7": // '7' - Toggle wireframe mode
             toggleWireframe();
@@ -587,8 +633,7 @@ function onKeyDown(e) {
                 rightFootGroup.rotation.x = leftFootGroup.rotation.x;
             }
             break;
-        // Close the robot
-        case "KeyC":
+        case "KeyC": // Close the robot
             leftArmGroup.position.x = -0.225;
             rightArmGroup.position.x = 0.225;
 
