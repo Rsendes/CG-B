@@ -1,34 +1,26 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { VRButton } from "three/addons/webxr/VRButton.js";
-import * as Stats from "three/addons/libs/stats.module.js";
-import { GUI } from "three/addons/libs/lil-gui.module.min.js";
+
 
 //////////////////////
 /* GLOBAL VARIABLES */
 //////////////////////
 let camera, scene, renderer;
-let cameraFrontal, cameraLateral, cameraTop;
-let currCamera;
-let trailer, hitch, robot, headGroup, leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup;
-let leftFoot, rightFoot, leftFootGroup, rightFootGroup;
+let cameraFrontal, cameraLateral, cameraTop, currCamera;
+let trailer, robot, headGroup, leftArmGroup, rightArmGroup
+let leftFootGroup, rightFootGroup, leftLegGroup, rightLegGroup;;
 let aspect;
-let clock; // Clock para medir o tempo entre frames
-const BASE_SPEED = 2.0; // Velocidade base em unidades por segundo
+let clock; // Clock to measure time between frames
+const BASE_SPEED = 2; // Base speed in units per second
 let isWireframe = false; // Flag to toggle wireframe mode
-let trailerBoundingBox, robotBoundingBox;
 let isAnimatingTrailer = false;
-let trailerAnimationStartPos = new THREE.Vector3();
 let trailerAnimationEndPos = new THREE.Vector3();
-let trailerAnimationProgress = 0;
-const TRAILER_ANIMATION_SPEED = 0.03; // Adjust speed as needed
 
-// Adicione estas variáveis globais:
+// Flag to track if the robot is transforming
 let isRobotTransforming = false;
 let transformationProgress = 0;
-const TRANSFORM_SPEED = 2.0; // Velocidade de transformação
 
-// Armazene as posições iniciais e finais para cada componente
+
+// Animation variables
 let startArmPosX, endArmPosX;
 let startHeadRotX, endHeadRotX;
 let startLegRotX, endLegRotX;
@@ -36,10 +28,22 @@ let startFootRotX, endFootRotX;
 
 // Track keys being pressed
 const keyState = {
+    // Trailer movement
     ArrowUp: false,
     ArrowDown: false,
     ArrowLeft: false,
-    ArrowRight: false
+    ArrowRight: false,
+    // Robot controls
+    KeyR: false, // Rotate head clockwise
+    KeyF: false, // Rotate head anticlockwise
+    KeyE: false, // Arms outward
+    KeyD: false, // Arms inward
+    KeyW: false, // Legs forward
+    KeyS: false, // Legs backward
+    KeyA: false, // Feet outward
+    KeyQ: false, // Feet inward
+    KeyC: false, // Close robot
+    KeyV: false  // Open robot
 };
 
 // Movement speed  
@@ -51,7 +55,7 @@ const TRAILER_TRAVEL = -3; // Constant travel distance for the trailer
 function createScene() {
     // Create a scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xcccccc);
+    scene.background = new THREE.Color(0xffffd1);
 }
 
 //////////////////////
@@ -90,7 +94,7 @@ function createCameras() {
 }
 
 function toggleWireframe() {
-    isWireframe = !isWireframe; // Use the correct variable name
+    isWireframe = !isWireframe; 
     
     
     // Go through all objects in the scene that have materials
@@ -106,13 +110,6 @@ function toggleWireframe() {
             }
         }
     });
-}
-
-/////////////////////
-/* CREATE LIGHT(S) */
-/////////////////////
-function createLights() {
-    // No lights in the original code since we're using MeshBasicMaterial
 }
 
 ////////////////////////
@@ -146,9 +143,8 @@ function createTrailer() {
     
     const trailerBody = new THREE.Mesh(geometry, materials);
     trailerBody.position.set(0, 0, 0); // Position the trailer
-    trailer.add(trailerBody); // Adicionar o corpo ao grupo em vez da cena
+    trailer.add(trailerBody); // Add the trailer body to the group
 
-    // Helper function to create and position wheels
 
     // Add four wheels using the helper function
     addWheel(0.25, -0.65, -1, trailer); // Left side rear wheel
@@ -157,12 +153,12 @@ function createTrailer() {
     addWheel(-0.25, -0.65, -0.65, trailer); // Right side front wheel
 
     // Add trailer hitch - a cylinder in the middle bottom of the trailer
-    const hitchMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 }); // Dark gray
+    const hitchMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); // Dark gray
     const hitchGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.1, 32);
-    hitch = new THREE.Mesh(hitchGeometry, hitchMaterial);
+    const hitch = new THREE.Mesh(hitchGeometry, hitchMaterial);
     hitch.position.set(0, -0.55, 0.75); // Center, bottom, back
     hitch.rotation.y = Math.PI / 2; // Rotate to be horizontal
-    trailer.add(hitch); // Adicionar o trailer ao grupo
+    trailer.add(hitch); // Add the hitch to the trailer
 
     // Add the trailer to the scene
     scene.add(trailer);
@@ -181,7 +177,7 @@ function addWheel(x, y, z, group) {
 function createRobot() {
     robot = new THREE.Group();
 
-    var current_height = 0;
+    let current_height = 0;
 
     // Create Waist
     const waistGeometry = new THREE.BoxGeometry(0.4, 0.2, 0.3);
@@ -195,12 +191,28 @@ function createRobot() {
 
     // Create Abdomen
     const abdomenGeometry = new THREE.BoxGeometry(0.3, 0.15, 0.3);
-    const abdomenMaterial = new THREE.MeshBasicMaterial({ color: 0x4e6ba7 });
+    const abdomenMaterial = new THREE.MeshBasicMaterial({ color: 0x273e9b });
     const abdomen = new THREE.Mesh(abdomenGeometry, abdomenMaterial);
     current_height += 0.175;
     abdomen.position.set(0, current_height, 0);
     robot.add(abdomen);
-
+    
+    // Create vertical grill on the front of abdomen
+    const abdomenGrillGroup = new THREE.Group();
+    const grillBarGeometry = new THREE.BoxGeometry(0.02, 0.1, 0.01);
+    const grillMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
+    
+    // Create 4 vertical bars for the grill
+    for (let i = 0; i < 4; i++) {
+        const grillBar = new THREE.Mesh(grillBarGeometry, grillMaterial);
+        grillBar.position.set(-0.075 + i * 0.05, 0, 0);
+        abdomenGrillGroup.add(grillBar);
+    }
+    
+    // Position the grill on the front of the abdomen
+    abdomenGrillGroup.position.set(0, current_height, 0.16);
+    robot.add(abdomenGrillGroup);
+    
     // Create Torso
     const torsoGeometry = new THREE.BoxGeometry(0.6, 0.35, 0.45);
     const torsoMaterial = new THREE.MeshBasicMaterial({ color: 0xb40808 });
@@ -208,6 +220,24 @@ function createRobot() {
     current_height += 0.25;
     torso.position.set(0, current_height, 0);
     robot.add(torso);
+    
+    // Create windshield on the front of torso - make it two side by side
+    const windshieldGeometry = new THREE.PlaneGeometry(0.18, 0.2);
+    const windshieldMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x87CEEB, 
+        transparent: true, 
+        opacity: 0.7 
+    });
+    
+    // Create two windshields side by side
+    const leftWindshield = new THREE.Mesh(windshieldGeometry, windshieldMaterial);
+    leftWindshield.position.set(-0.12, current_height , 0.23);
+    robot.add(leftWindshield);
+    
+    const rightWindshield = new THREE.Mesh(windshieldGeometry, windshieldMaterial);
+    rightWindshield.position.set(0.12, current_height , 0.23);
+    robot.add(rightWindshield);
+    
 
     // Create Head Group
     const headRotationCentre = current_height + 0.35/2;
@@ -216,10 +246,9 @@ function createRobot() {
 
     const headOffset = current_height - headRotationCentre + 0.28;
  
-
     // Create Head Sphere
     const headGeometry = new THREE.SphereGeometry(0.1, 12, 12);
-    const headMaterial = new THREE.MeshBasicMaterial({ color: 0x4e6ba7 });
+    const headMaterial = new THREE.MeshBasicMaterial({ color: 0x273e9b });
     const head = new THREE.Mesh(headGeometry, headMaterial);
     head.position.set(0, headOffset, 0);
     headGroup.add(head);
@@ -238,10 +267,9 @@ function createRobot() {
     const antennaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.05, 32);
     const antennaMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const leftAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
-    const antennaY = headOffset + 0.105;
-    leftAntenna.position.set(-0.05, antennaY, 0);
+    leftAntenna.position.set(-0.05, headOffset + 0.105, 0);
     const rightAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
-    rightAntenna.position.set(0.05, antennaY, 0);
+    rightAntenna.position.set(0.05, headOffset + 0.105, 0);
     headGroup.add(leftAntenna);
     headGroup.add(rightAntenna);
 
@@ -277,20 +305,70 @@ function createRobot() {
     // Create Forearms
     const forearmGeometry = new THREE.BoxGeometry(0.15, 0.15, 0.452);
     const forearmMaterials = [
-    new THREE.MeshBasicMaterial({ color: 0x4e6ba7 }), // Right face
-    new THREE.MeshBasicMaterial({ color: 0x4e6ba7 }), // Left face
-    new THREE.MeshBasicMaterial({ color: 0x4e6ba7 }), // Top face
-    new THREE.MeshBasicMaterial({ color: 0x4e6ba7 }), // Bottom face
-    new THREE.MeshBasicMaterial({ color: 0xffff00 }), // Front face (amarela)
-    new THREE.MeshBasicMaterial({ color: 0x4e6ba7 })  // Back face
+    new THREE.MeshBasicMaterial({ color: 0x273e9b }), // Right face
+    new THREE.MeshBasicMaterial({ color: 0x273e9b }), // Left face
+    new THREE.MeshBasicMaterial({ color: 0x273e9b }), // Top face
+    new THREE.MeshBasicMaterial({ color: 0x273e9b }), // Bottom face
+    new THREE.MeshBasicMaterial({ color: 0xffff00 }), // Front face (yellow)
+    new THREE.MeshBasicMaterial({ color: 0x273e9b })  // Back face
     ];
+    
+    // Create forearms
     const leftForearm = new THREE.Mesh(forearmGeometry, forearmMaterials);
     const rightForearm = new THREE.Mesh(forearmGeometry, forearmMaterials);
     leftForearm.position.set(0, -0.175, 0.30);
     rightForearm.position.set(0, -0.175, 0.30);
+    
+    // Create black border around yellow face - using edges
+    const borderMaterial = new THREE.MeshBasicMaterial({ color: 0x273e9b });
+    
+    // Helper function to add borders to a forearm
+    function addForearmBorders(forearm) {
+        // The borderWidth should be small but visible
+        const borderWidth = 0.009;
+        const faceSize = 0.15;
+        const offset = 0.225 + 0.001; // Half depth of forearm + small offset
+        
+        // Top border
+        const topBorder = new THREE.Mesh(
+            new THREE.BoxGeometry(faceSize, borderWidth, borderWidth),
+            borderMaterial
+        );
+        topBorder.position.set(0, faceSize/2 - borderWidth/2, offset);
+        forearm.add(topBorder);
+        
+        // Bottom border
+        const bottomBorder = new THREE.Mesh(
+            new THREE.BoxGeometry(faceSize, borderWidth, borderWidth),
+            borderMaterial
+        );
+        bottomBorder.position.set(0, -faceSize/2 + borderWidth/2, offset);
+        forearm.add(bottomBorder);
+        
+        // Left border
+        const leftBorder = new THREE.Mesh(
+            new THREE.BoxGeometry(borderWidth, faceSize, borderWidth),
+            borderMaterial
+        );
+        leftBorder.position.set(-faceSize/2 + borderWidth/2, 0, offset);
+        forearm.add(leftBorder);
+        
+        // Right border
+        const rightBorder = new THREE.Mesh(
+            new THREE.BoxGeometry(borderWidth, faceSize, borderWidth),
+            borderMaterial
+        );
+        rightBorder.position.set(faceSize/2 - borderWidth/2, 0, offset);
+        forearm.add(rightBorder);
+    }
+    
+    // Add borders to both forearms
+    addForearmBorders(leftForearm);
+    addForearmBorders(rightForearm);
+    
     leftArmGroup.add(leftForearm);
     rightArmGroup.add(rightForearm);
-
+    
     robot.add(leftArmGroup);
     robot.add(rightArmGroup);
 
@@ -303,7 +381,7 @@ function createRobot() {
     rightLegGroup.position.set(0, -0.05, 0);
 
     const thighGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.15);
-    const thighMaterial = new THREE.MeshBasicMaterial({ color: 0x4e6ba7 });
+    const thighMaterial = new THREE.MeshBasicMaterial({ color: 0x273e9b });
     const leftThigh = new THREE.Mesh(thighGeometry, thighMaterial);
     const rightThigh = new THREE.Mesh(thighGeometry, thighMaterial);
     leftThigh.position.set(-0.125, - 0.2, 0);
@@ -338,9 +416,9 @@ function createRobot() {
     rightFootGroup.position.set(0, -0.325, 0);
 
     const footGeometry = new THREE.BoxGeometry(0.15, 0.25, 0.2);
-    const footMaterial = new THREE.MeshBasicMaterial({ color: 0x4e6ba7 });
-    leftFoot = new THREE.Mesh(footGeometry, footMaterial);
-    rightFoot = new THREE.Mesh(footGeometry, footMaterial);
+    const footMaterial = new THREE.MeshBasicMaterial({ color: 0x273e9b });
+    const leftFoot = new THREE.Mesh(footGeometry, footMaterial);
+    const rightFoot = new THREE.Mesh(footGeometry, footMaterial);
     
     leftFoot.position.set(0, 0, 0.225);
     rightFoot.position.set(0, 0, 0.225);
@@ -365,7 +443,6 @@ function checkCollisions() {
     const maxRobot = new THREE.Vector3(0.3, 0.8, 0.225);
 
     // Fix the trailer bounding box to properly surround the entire trailer group
-    // Include wheels (which extend to y=-0.8) and cover the full trailer length (2.5 units)
     const minTrailer = new THREE.Vector3(-0.35, -0.8, -1.25);
     const maxTrailer = new THREE.Vector3(0.35, 0.5, 1.25);
 
@@ -379,17 +456,7 @@ function checkCollisions() {
     const currentMinTrailer = currentTrailerCenter.clone().add(minTrailer);
     const currentMaxTrailer = currentTrailerCenter.clone().add(maxTrailer);
 
-    // Create bounding boxes
-    robotBoundingBox = new THREE.Box3(currentMinRobot, currentMaxRobot);
-    trailerBoundingBox = new THREE.Box3(currentMinTrailer, currentMaxTrailer);
-
-    // Remove any existing box helpers to prevent buildup
-    scene.children.forEach(child => {
-        if (child instanceof THREE.Box3Helper) {
-            scene.remove(child);
-        }
-    });
-
+   
     // Manual AABB collision detection
     return (
         currentMinRobot.x <= currentMaxTrailer.x &&
@@ -419,14 +486,8 @@ function handleCollisions() {
             // Start animating to hitch position
             isAnimatingTrailer = true;
             
-            // Store starting position (current position at collision)
-            trailerAnimationStartPos.copy(trailer.position);
-            
             // Set target position (hitch position)
             trailerAnimationEndPos.set(0, 0.6, -1.70);
-            
-            // Reset animation progress
-            trailerAnimationProgress = 0;
         }
     }
 }
@@ -436,74 +497,149 @@ function handleCollisions() {
 ////////////
 // Update the update() function to handle the animation
 function update() {
-    // Obter o delta time (tempo desde o último frame em segundos)
+    // Get the time delta
     const deltaTime = clock.getDelta();
     
-    // Calcular movimento baseado no tempo
+    // Calculate frame speed based on delta time
     const frameSpeed = BASE_SPEED * deltaTime;
+    const rotationSpeed = 0.15;
 
     // Handle robot transformation if active
     if (isRobotTransforming) {
-        // Incrementar progresso baseado no tempo
-        transformationProgress += deltaTime * TRANSFORM_SPEED;
+        // Increment progress based on delta time and speed
+        transformationProgress += deltaTime * BASE_SPEED;
     
-        // Limitar progresso a 1.0 (100%)
+        // Clamp progress to [0, 1]
         if (transformationProgress >= 1.0) {
             transformationProgress = 1.0;
             isRobotTransforming = false;
         }
     
-        // Aplicar interpolação linear em cada componente
+        // Interpolate between start and end values
         const t = transformationProgress;
     
-        // Animar braços
+        // Animate arms
         leftArmGroup.position.x = startArmPosX + t * (endArmPosX - startArmPosX);
         rightArmGroup.position.x = -leftArmGroup.position.x;
     
-        // Animar cabeça
+        // Animate head
         headGroup.rotation.x = startHeadRotX + t * (endHeadRotX - startHeadRotX);
     
-        // Animar pernas
+        // Animate legs
         leftLegGroup.rotation.x = startLegRotX + t * (endLegRotX - startLegRotX);
         rightLegGroup.rotation.x = leftLegGroup.rotation.x;
     
-        // Animar pés
+        // Animate feet
         leftFootGroup.rotation.x = startFootRotX + t * (endFootRotX - startFootRotX);
         rightFootGroup.rotation.x = leftFootGroup.rotation.x;
+    } else {
+        // Process robot controls when not in transformation
+        // Head rotation
+        if (keyState.KeyR && headGroup.rotation.x > -Math.PI) {
+            headGroup.rotation.x = Math.max(headGroup.rotation.x - (rotationSpeed * deltaTime * 10), -Math.PI);
+        }
+        if (keyState.KeyF && headGroup.rotation.x < 0) {
+            headGroup.rotation.x = Math.min(headGroup.rotation.x + (rotationSpeed * deltaTime * 10), 0);
+        }
+        
+        // Arms movement 
+        const armIncrement = frameSpeed / 5;
+        if (keyState.KeyE) { // Arms outward (move towards -0.375 for left arm)
+            if (leftArmGroup.position.x > -0.375) {
+                leftArmGroup.position.x = Math.max(-0.375, leftArmGroup.position.x - armIncrement); // using max to ensure it doesn't go beyond -0.375
+                rightArmGroup.position.x = -leftArmGroup.position.x; 
+            }
+        }
+        if (keyState.KeyD) { // Arms inward (move towards -0.225 for left arm)
+            if (leftArmGroup.position.x < -0.225) {
+                leftArmGroup.position.x = Math.min(-0.225, leftArmGroup.position.x + armIncrement); // using min to ensure it doesn't go beyond -0.225
+                rightArmGroup.position.x = -leftArmGroup.position.x;
+            }
+        }
+
+        // Legs rotation
+        if (keyState.KeyW && leftLegGroup.rotation.x < Math.PI/2) {
+            leftLegGroup.rotation.x = Math.min(leftLegGroup.rotation.x + (rotationSpeed * deltaTime * 10), Math.PI/2);
+            rightLegGroup.rotation.x = leftLegGroup.rotation.x;
+        }
+        if (keyState.KeyS && leftLegGroup.rotation.x > 0) {
+            leftLegGroup.rotation.x = Math.max(leftLegGroup.rotation.x - (rotationSpeed * deltaTime * 10), 0);
+            rightLegGroup.rotation.x = leftLegGroup.rotation.x;
+        }
+        
+        // Feet rotation
+        if (keyState.KeyA && leftFootGroup.rotation.x < Math.PI/2) {
+            leftFootGroup.rotation.x = Math.min(leftFootGroup.rotation.x + (rotationSpeed * deltaTime * 10), Math.PI/2);
+            rightFootGroup.rotation.x = leftFootGroup.rotation.x;
+        }
+        if (keyState.KeyQ && leftFootGroup.rotation.x > 0) {
+            leftFootGroup.rotation.x = Math.max(leftFootGroup.rotation.x - (rotationSpeed * deltaTime * 10), 0);
+            rightFootGroup.rotation.x = leftFootGroup.rotation.x;
+        }
+        
+        // Full transformations
+        if (keyState.KeyC && !isRobotTransforming) {
+            // Close robot transformation
+            isRobotTransforming = true;
+            startArmPosX = leftArmGroup.position.x;
+            startHeadRotX = headGroup.rotation.x;
+            startLegRotX = leftLegGroup.rotation.x;
+            startFootRotX = leftFootGroup.rotation.x;
+            endArmPosX = -0.225;
+            endHeadRotX = -Math.PI;
+            endLegRotX = Math.PI/2;
+            endFootRotX = Math.PI/2;
+            transformationProgress = 0;
+            keyState.KeyC = false; // Reset to prevent repeats
+        }
+        if (keyState.KeyV && !isRobotTransforming) {
+            // Open robot transformation
+            isRobotTransforming = true;
+            startArmPosX = leftArmGroup.position.x;
+            startHeadRotX = headGroup.rotation.x;
+            startLegRotX = leftLegGroup.rotation.x;
+            startFootRotX = leftFootGroup.rotation.x;
+            endArmPosX = -0.375;
+            endHeadRotX = 0;
+            endLegRotX = 0;
+            endFootRotX = 0;
+            transformationProgress = 0;
+            keyState.KeyV = false; // Reset to prevent repeats
+        }
     }
     
     // Handle trailer animation if active
     if (isAnimatingTrailer) {
-        // Calcular direção - simples subtração de vetores
+        // Calculate the distance to move based on frame speed
         const dx = trailerAnimationEndPos.x - trailer.position.x;
         const dy = trailerAnimationEndPos.y - trailer.position.y;
         const dz = trailerAnimationEndPos.z - trailer.position.z;
         
-        // Calcular distância total restante até o destino
+        // Calculate the distance remaining to the target position
         const distanceRemaining = Math.sqrt(dx*dx + dy*dy + dz*dz);
         
-        // Verificar se chegamos ao destino
+        // If the distance remaining is less than the frame speed, snap to the target position
         if (distanceRemaining < frameSpeed) {
-            // Animação completa - colocar exatamente na posição final
+            // Animation complete, snap to target position
             trailer.position.x = trailerAnimationEndPos.x;
             trailer.position.y = trailerAnimationEndPos.y;
             trailer.position.z = trailerAnimationEndPos.z;
             isAnimatingTrailer = false;
         } else {
-            // Normalizar a direção (criar um vetor unitário)
+            // Normalize the direction vector
             const length = Math.sqrt(dx*dx + dy*dy + dz*dz);
             const ndx = dx / length;
             const ndy = dy / length;
             const ndz = dz / length;
             
-            // Mover um passo na direção certa com velocidade baseada no tempo
+            // Move the trailer in the direction of the target position
             trailer.position.x += ndx * frameSpeed;
             trailer.position.y += ndy * frameSpeed;
             trailer.position.z += ndz * frameSpeed;
         }
     } else {
         // Only allow movement if not animating
-        // Move trailer based on which arrow keys are pressed, com velocidade baseada no tempo
+        // Move trailer based on which arrow keys are pressed, with speed based on frame speed
         if (keyState.ArrowUp) {
             trailer.position.z -= frameSpeed;
         }
@@ -619,107 +755,18 @@ function onKeyDown(e) {
         case "Digit3": // '3' - Top camera
             currCamera = cameraTop;
             break;
-        case "Digit4": // '4' - Original perspective camera
+        case "Digit4": // '4' - Perspective camera
             currCamera = camera;
             break;
         case "Digit7": // '7' - Toggle wireframe mode
             toggleWireframe();
             break;
-        // Track arrow keys for trailer movement
-        case "ArrowUp":
-        case "ArrowDown":
-        case "ArrowLeft":
-        case "ArrowRight":
-            keyState[e.code] = true;
-            break;
-        case "KeyR": // Rotate head clockwise (0 to PI)
-            if (headGroup.rotation.x > -Math.PI) {
-                headGroup.rotation.x = Math.max(headGroup.rotation.x - 0.15, -Math.PI);
+        default:
+            // Set key state for any key that's in our keyState object
+            if (keyState.hasOwnProperty(e.code)) {
+                keyState[e.code] = true;
             }
             break;
-        case "KeyF": // Rotate head anticlockwise (PI to 0)
-            if (headGroup.rotation.x < 0) {
-                headGroup.rotation.x = Math.min(headGroup.rotation.x + 0.15, 0);
-            }
-            break;
-        case "KeyE": // Translate Arms Outwards
-            if (leftArmGroup.position.x > -0.35) {
-                leftArmGroup.position.x -= 0.05;
-                rightArmGroup.position.x += 0.05;
-            }
-            break;
-        case "KeyD": // Translate Arms Inwards
-            if (leftArmGroup.position.x < -0.25) {
-                leftArmGroup.position.x += 0.05;
-                rightArmGroup.position.x -= 0.05;
-            }
-            break;
-        case "KeyW": // Rotate Legs Forwards (to in front)
-            if (leftLegGroup.rotation.x < Math.PI/2) {
-                leftLegGroup.rotation.x = Math.min(leftLegGroup.rotation.x + 0.15, Math.PI/2);
-                rightLegGroup.rotation.x = leftLegGroup.rotation.x;
-            }
-            break;
-        case "KeyS": // Rotate Legs Backwards (to standing)
-            if (leftLegGroup.rotation.x > 0) {
-                leftLegGroup.rotation.x = Math.max(leftLegGroup.rotation.x - 0.15, 0);
-                rightLegGroup.rotation.x = leftLegGroup.rotation.x;
-            }
-            break;
-        case "KeyA": // Rotate Feet Outwards
-            if (leftFootGroup.rotation.x < Math.PI/2) {
-                leftFootGroup.rotation.x = Math.min(leftFootGroup.rotation.x + 0.15, Math.PI/2);
-                rightFootGroup.rotation.x = leftFootGroup.rotation.x;
-            }
-            break;
-        case "KeyQ": // Rotate Feet Inwards
-            if (leftFootGroup.rotation.x > 0) {
-                leftFootGroup.rotation.x = Math.max(leftFootGroup.rotation.x - 0.15, 0);
-                rightFootGroup.rotation.x = leftFootGroup.rotation.x;
-            }
-            break;
-        case "KeyC": // Close the robot
-            if (!isRobotTransforming) {
-                // Iniciar transformação
-                isRobotTransforming = true;
-        
-                // Armazenar valores iniciais
-                startArmPosX = leftArmGroup.position.x;
-                startHeadRotX = headGroup.rotation.x;
-                startLegRotX = leftLegGroup.rotation.x;
-                startFootRotX = leftFootGroup.rotation.x;
-        
-                // Definir valores finais
-                endArmPosX = -0.225;
-                endHeadRotX = -Math.PI;
-                endLegRotX = Math.PI/2;
-                endFootRotX = Math.PI/2;
-        
-                // Reiniciar progresso
-                transformationProgress = 0;
-            }
-            break;
-        case "KeyV": // Open the robot (transform back)
-            if (!isRobotTransforming) {
-                // Iniciar transformação
-                isRobotTransforming = true;
-                
-                // Armazenar valores iniciais (posição atual)
-                startArmPosX = leftArmGroup.position.x;
-                startHeadRotX = headGroup.rotation.x;
-                startLegRotX = leftLegGroup.rotation.x;
-                startFootRotX = leftFootGroup.rotation.x;
-                
-                // Definir valores finais (posição de robô)
-                endArmPosX = -0.375; // Posição original dos braços
-                endHeadRotX = 0;     // Cabeça olhando para frente
-                endLegRotX = 0;      // Pernas esticadas para baixo
-                endFootRotX = 0;     // Pés retos
-                
-                // Reiniciar progresso
-                transformationProgress = 0;
-            }
-            break;   
     }
 }
 
