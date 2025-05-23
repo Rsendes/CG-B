@@ -124,14 +124,11 @@ function createObjects() {
 }
 
 function createTrailer() {
-    // Create a trailer group object
     trailer = new THREE.Group();
     trailer.position.set(0, 0.6, TRAILER_TRAVEL); // Set initial position
     
-    // Add a trailer with different colors for each face
     const geometry = new THREE.BoxGeometry(0.7, 1, 2.5);
     
-    // Create materials array - one for each face
     const materials = [
         new THREE.MeshBasicMaterial({ color: 0x666666 }), // Right face (positive X)
         new THREE.MeshBasicMaterial({ color: 0xAAAAAA }), // Left face (negative X)
@@ -142,8 +139,8 @@ function createTrailer() {
     ];
     
     const trailerBody = new THREE.Mesh(geometry, materials);
-    trailerBody.position.set(0, 0, 0); // Position the trailer
-    trailer.add(trailerBody); // Add the trailer body to the group
+    trailerBody.position.set(0, 0, 0); 
+    trailer.add(trailerBody); 
 
 
     // Add four wheels using the helper function
@@ -153,21 +150,20 @@ function createTrailer() {
     addWheel(-0.25, -0.65, -0.65, trailer); // Right side front wheel
 
     // Add trailer hitch - a cylinder in the middle bottom of the trailer
-    const hitchMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); // Dark gray
+    const hitchMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); 
     const hitchGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.1, 32);
     const hitch = new THREE.Mesh(hitchGeometry, hitchMaterial);
-    hitch.position.set(0, -0.55, 0.75); // Center, bottom, back
+    hitch.position.set(0, -0.55, 0.75);
     hitch.rotation.y = Math.PI / 2; // Rotate to be horizontal
-    trailer.add(hitch); // Add the hitch to the trailer
+    trailer.add(hitch);
 
-    // Add the trailer to the scene
     scene.add(trailer);
 
 }
 
 function addWheel(x, y, z, group) {
     const wheelGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 32);
-    const wheelMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); // Dark gray
+    const wheelMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
     const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
     wheel.position.set(x, y, z); // Position the wheel
     wheel.rotation.z = Math.PI / 2; // Rotate to point outward
@@ -495,7 +491,6 @@ function handleCollisions() {
 ////////////
 /* UPDATE */
 ////////////
-// Update the update() function to handle the animation
 function update() {
     // Get the time delta
     const deltaTime = clock.getDelta();
@@ -544,13 +539,13 @@ function update() {
         
         // Arms movement 
         const armIncrement = frameSpeed / 5;
-        if (keyState.KeyE) { // Arms outward (move towards -0.375 for left arm)
+        if (keyState.KeyD) { // Arms outward (move towards -0.375 for left arm)
             if (leftArmGroup.position.x > -0.375) {
                 leftArmGroup.position.x = Math.max(-0.375, leftArmGroup.position.x - armIncrement); // using max to ensure it doesn't go beyond -0.375
                 rightArmGroup.position.x = -leftArmGroup.position.x; 
             }
         }
-        if (keyState.KeyD) { // Arms inward (move towards -0.225 for left arm)
+        if (keyState.KeyE) { // Arms inward (move towards -0.225 for left arm)
             if (leftArmGroup.position.x < -0.225) {
                 leftArmGroup.position.x = Math.min(-0.225, leftArmGroup.position.x + armIncrement); // using min to ensure it doesn't go beyond -0.225
                 rightArmGroup.position.x = -leftArmGroup.position.x;
@@ -568,11 +563,11 @@ function update() {
         }
         
         // Feet rotation
-        if (keyState.KeyA && leftFootGroup.rotation.x < Math.PI/2) {
+        if (keyState.KeyQ && leftFootGroup.rotation.x < Math.PI/2) {
             leftFootGroup.rotation.x = Math.min(leftFootGroup.rotation.x + (rotationSpeed * deltaTime * 10), Math.PI/2);
             rightFootGroup.rotation.x = leftFootGroup.rotation.x;
         }
-        if (keyState.KeyQ && leftFootGroup.rotation.x > 0) {
+        if (keyState.KeyA && leftFootGroup.rotation.x > 0) {
             leftFootGroup.rotation.x = Math.max(leftFootGroup.rotation.x - (rotationSpeed * deltaTime * 10), 0);
             rightFootGroup.rotation.x = leftFootGroup.rotation.x;
         }
@@ -590,7 +585,7 @@ function update() {
             endLegRotX = Math.PI/2;
             endFootRotX = Math.PI/2;
             transformationProgress = 0;
-            keyState.KeyC = false; // Reset to prevent repeats
+            keyState.KeyC = false;
         }
         if (keyState.KeyV && !isRobotTransforming) {
             // Open robot transformation
@@ -604,7 +599,7 @@ function update() {
             endLegRotX = 0;
             endFootRotX = 0;
             transformationProgress = 0;
-            keyState.KeyV = false; // Reset to prevent repeats
+            keyState.KeyV = false; 
         }
     }
     
@@ -661,7 +656,6 @@ function update() {
 /* DISPLAY */
 /////////////
 function render() {
-    // Render with the current camera
     renderer.render(scene, currCamera);
 }
 
@@ -669,25 +663,19 @@ function render() {
 /* INITIALIZE ANIMATION CYCLE */
 ////////////////////////////////
 function init() {
-    // Create scene
     createScene();
     
-    // Create cameras
     createCameras();
     
-    // Create objects
     createObjects();
 
-    // Initialize clock
     clock = new THREE.Clock();
     clock.start();
 
-    // Create a renderer
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Add event listeners
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("resize", onResize);
@@ -699,10 +687,8 @@ function init() {
 function animate() {
     requestAnimationFrame(animate);
     
-    // Update scene
     update();
     
-    // Render scene
     render();
 }
 
