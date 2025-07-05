@@ -1,2 +1,2 @@
 # CG-B
-Projeto CG Trabalho B
+Project for Computer Graphics
