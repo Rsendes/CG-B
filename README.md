@@ -1,2 +1,2 @@
 # CG-B
-Project for Computer Graphics
+First project for Computer Graphics
